@@ -6,14 +6,34 @@ from hrms.setup import delete_custom_fields
 from frappe_us_payroll.custom_fields import get_custom_fields
 
 SOCIAL_SECURITY_TAXABLE_CUSTOM_FIELD = "Salary Component-us_social_security_taxable"
+SOCIAL_SECURITY_COMPONENT = "US Social Security"
 
 
 def install_custom_fields() -> None:
-	"""Create or update the app-owned payroll fields."""
+	"""Create or update the app-owned payroll fields and components."""
 	initialize_existing_earnings = not frappe.db.exists("Custom Field", SOCIAL_SECURITY_TAXABLE_CUSTOM_FIELD)
 	create_custom_fields(get_custom_fields(), update=True)
 	if initialize_existing_earnings:
 		enable_social_security_for_existing_earnings()
+	install_salary_components()
+
+
+def install_salary_components() -> None:
+	"""Create required app-owned Salary Components without changing existing configuration."""
+	if frappe.db.exists("Salary Component", SOCIAL_SECURITY_COMPONENT):
+		return
+
+	frappe.get_doc(
+		{
+			"doctype": "Salary Component",
+			"salary_component": SOCIAL_SECURITY_COMPONENT,
+			"salary_component_abbr": "USSS",
+			"type": "Deduction",
+			"depends_on_payment_days": 0,
+			"remove_if_zero_valued": 0,
+			"description": "Employee Social Security tax withheld by Frappe US Payroll",
+		}
+	).insert(ignore_permissions=True)
 
 
 def enable_social_security_for_existing_earnings() -> None:
