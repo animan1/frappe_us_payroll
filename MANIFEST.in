@@ -1,0 +1,10 @@
+include *.md
+include *.txt
+recursive-include frappe_us_payroll *.csv
+recursive-include frappe_us_payroll *.html
+recursive-include frappe_us_payroll *.js
+recursive-include frappe_us_payroll *.json
+recursive-include frappe_us_payroll *.md
+recursive-include frappe_us_payroll *.py
+recursive-include frappe_us_payroll *.txt
+recursive-exclude frappe_us_payroll *.pyc
