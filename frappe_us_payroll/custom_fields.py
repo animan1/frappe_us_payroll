@@ -24,10 +24,16 @@ def get_custom_fields() -> CustomFieldMap:
 		],
 		"Salary Structure Assignment": [
 			{
+				"fieldname": "us_payroll_opening_balances_section",
+				"label": "US Payroll Opening Balances",
+				"fieldtype": "Section Break",
+				"insert_after": "leave_encashment_amount_per_day",
+			},
+			{
 				"fieldname": "us_social_security_taxable_wages_till_date",
 				"label": "US Social Security Taxable Wages Till Date",
 				"fieldtype": "Currency",
-				"insert_after": "taxable_earnings_till_date",
+				"insert_after": "us_payroll_opening_balances_section",
 				"description": "Opening year-to-date wages before payroll begins in Frappe",
 				"options": "currency",
 				"non_negative": 1,

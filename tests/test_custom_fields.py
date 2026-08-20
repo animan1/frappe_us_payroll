@@ -11,14 +11,19 @@ class CustomFieldsTest(unittest.TestCase):
 			{doctype: [field["fieldname"] for field in fields] for doctype, fields in custom_fields.items()},
 			{
 				"Salary Component": ["us_social_security_taxable"],
-				"Salary Structure Assignment": ["us_social_security_taxable_wages_till_date"],
+				"Salary Structure Assignment": [
+					"us_payroll_opening_balances_section",
+					"us_social_security_taxable_wages_till_date",
+				],
 				"Salary Slip": ["us_social_security_taxable_wages"],
 			},
 		)
 
 	def test_opening_wages_remain_editable_after_assignment_submission(self) -> None:
-		assignment_field = get_custom_fields()["Salary Structure Assignment"][0]
+		section_field, assignment_field = get_custom_fields()["Salary Structure Assignment"]
 
+		self.assertEqual(section_field["fieldtype"], "Section Break")
+		self.assertEqual(assignment_field["insert_after"], section_field["fieldname"])
 		self.assertEqual(assignment_field["allow_on_submit"], 1)
 		self.assertEqual(assignment_field["non_negative"], 1)
 
