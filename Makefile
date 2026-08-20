@@ -3,13 +3,14 @@ SHELL := /bin/bash
 
 APP := frappe_us_payroll
 SITE ?= hrms.localhost
+SLIP ?=
 BENCH_DIR ?= /home/frappe/frappe-bench
 UV_CACHE_DIR ?= /tmp/frappe-us-payroll-uv-cache
 COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install migrate enable-tests deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip enable-tests deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -65,13 +66,22 @@ register: link ## Register the bind-mounted app with the bench.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe sed -i -e 's/$(APP)//g' -e '/^$$/d' sites/apps.txt
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bash -c 'printf "\n%s\n" "$(APP)" >> sites/apps.txt'
 
-install: register ## Install the app package and app on the configured Frappe site (one time per site).
+bench-deps: link ## Sync the app and its Python dependencies into the Frappe bench.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe env/bin/pip install --editable apps/$(APP)
+
+install: register bench-deps ## Install the app package and app on the configured Frappe site (one time per site).
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) install-app $(APP)
 	@$(MAKE) restart
 
 migrate: link ## Migrate the configured site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) migrate
+
+e2e-demo: bench-deps ## Create a persistent $1,000 Salary Slip for manual UI review.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.ensure_social_security_e2e_demo
+
+recalculate-slip: bench-deps ## Recalculate a draft Salary Slip; pass SLIP="...".
+	@test -n "$(SLIP)" || (echo 'SLIP is required' >&2; exit 2)
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.recalculate_salary_slip --args '["$(SLIP)"]'
 
 deps-lock: ## Resolve application and development dependencies into uv.lock.
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv lock
@@ -85,7 +95,7 @@ unit: deps ## Run tests that do not require a Frappe site.
 enable-tests: ## Enable Frappe tests on the configured development site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) set-config allow_tests true
 
-test: link enable-tests ## Run all app tests against the configured Frappe site.
+test: bench-deps enable-tests ## Run all app tests against the configured Frappe site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) run-tests --app $(APP)
 
 format: deps ## Format Python source with the locked Ruff version.
