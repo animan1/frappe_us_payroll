@@ -23,6 +23,7 @@ These instructions apply to all work in this repository.
 6. Keep secrets and employee payroll data out of the repository and Git history. Test fixtures derived from real payroll must be minimized and de-identified.
 7. Never commit or push directly to `main`. Use a feature branch and a pull request; append commits after publication rather than rewriting published history.
 8. Do not claim a payroll calculation is correct without an authoritative source and deterministic tests, including threshold-boundary cases where applicable.
+9. For executable changes, include reviewer exercise instructions in the pull request body: prerequisites, concrete commands or UI steps, and the expected result.
 
 ## Completion report
 
