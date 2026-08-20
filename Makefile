@@ -3,13 +3,14 @@ SHELL := /bin/bash
 
 APP := frappe_us_payroll
 SITE ?= hrms.localhost
+SLIP ?=
 BENCH_DIR ?= /home/frappe/frappe-bench
 UV_CACHE_DIR ?= /tmp/frappe-us-payroll-uv-cache
 COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate enable-tests deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip enable-tests deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -74,6 +75,13 @@ install: register bench-deps ## Install the app package and app on the configure
 
 migrate: link ## Migrate the configured site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) migrate
+
+e2e-demo: bench-deps ## Create a persistent $1,000 Salary Slip for manual UI review.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.ensure_social_security_e2e_demo
+
+recalculate-slip: bench-deps ## Recalculate a draft Salary Slip; pass SLIP="...".
+	@test -n "$(SLIP)" || (echo 'SLIP is required' >&2; exit 2)
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.recalculate_salary_slip --args '["$(SLIP)"]'
 
 deps-lock: ## Resolve application and development dependencies into uv.lock.
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv lock
