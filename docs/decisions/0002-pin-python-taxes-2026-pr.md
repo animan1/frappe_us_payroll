@@ -18,10 +18,10 @@ review.
 Pin `python-taxes` to commit `631ba1eca6f613fd3ec3cc4ada7d8e844308a71c` from the pull-request author's fork.
 The pinned source remains an external MIT-licensed dependency. It is not vendored or modified here.
 
-The Frappe-independent adapter initially exposes employee withholding only because the dependency has no
-independently sourced employer-rate API. Employer liability will be added when its rate is represented and tested
-explicitly rather than inferred from the employee result. The adapter accepts Social Security taxable wages
-explicitly; it does not assume that HRMS gross pay is taxable wages.
+The Frappe-independent adapter exposes employee withholding only because the dependency has no independently
+sourced employer-rate API. Explicit employer-liability calculation is tracked in the deferred backlog rather
+than inferred from the employee result. The adapter accepts Social Security taxable wages explicitly; it does not
+assume that HRMS gross pay is taxable wages.
 
 ## Verification
 
