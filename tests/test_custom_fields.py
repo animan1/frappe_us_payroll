@@ -22,6 +22,11 @@ class CustomFieldsTest(unittest.TestCase):
 		self.assertEqual(assignment_field["allow_on_submit"], 1)
 		self.assertEqual(assignment_field["non_negative"], 1)
 
+	def test_social_security_taxability_defaults_on(self) -> None:
+		component_field = get_custom_fields()["Salary Component"][0]
+
+		self.assertEqual(component_field["default"], 1)
+
 	def test_salary_slip_wages_are_persisted_output(self) -> None:
 		salary_slip_field = get_custom_fields()["Salary Slip"][0]
 

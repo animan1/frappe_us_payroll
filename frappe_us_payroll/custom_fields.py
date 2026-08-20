@@ -15,7 +15,7 @@ def get_custom_fields() -> CustomFieldMap:
 				"fieldtype": "Check",
 				"insert_after": "description",
 				"depends_on": 'eval:doc.type == "Earning"',
-				"default": 0,
+				"default": 1,
 			},
 		],
 		"Salary Structure Assignment": [
