@@ -8,6 +8,15 @@ class _Config(Protocol):
 
 class _Database(Protocol):
 	def exists(self, doctype: str, name: str) -> bool: ...
+	def set_value(
+		self,
+		doctype: str,
+		filters: Mapping[str, JsonScalar],
+		fieldname: str,
+		value: JsonScalar,
+		*,
+		update_modified: bool = ...,
+	) -> None: ...
 
 class _Document(Protocol):
 	def insert(self, *, ignore_permissions: bool = ...) -> _Document: ...
