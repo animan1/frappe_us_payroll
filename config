@@ -1,0 +1,60 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = git@github.com:animan1/frappe_us_payroll.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[branch "feat/project-foundation"]
+	remote = origin
+	merge = refs/heads/feat/project-foundation
+[branch "feat/app-foundation"]
+	remote = origin
+	merge = refs/heads/feat/app-foundation
+[branch "feat/salary-slip-integration"]
+	remote = origin
+	merge = refs/heads/feat/salary-slip-integration
+[branch "docs/project-context"]
+	remote = origin
+	merge = refs/heads/docs/project-context
+[branch "docs/python-taxes-assessment"]
+	remote = origin
+	merge = refs/heads/docs/python-taxes-assessment
+[branch "chore/locked-python-taxes-dependency"]
+	remote = origin
+	merge = refs/heads/chore/locked-python-taxes-dependency
+[branch "feat/social-security-calculator"]
+	remote = origin
+	merge = refs/heads/feat/social-security-calculator
+[branch "feat/social-security-salary-slip"]
+	remote = origin
+	merge = refs/heads/feat/social-security-salary-slip
+[branch "cleanup/remove-ui-smoke"]
+	remote = origin
+	merge = refs/heads/cleanup/remove-ui-smoke
+[branch "feature/social-security-slip-mapping"]
+	remote = origin
+	merge = refs/heads/feature/social-security-slip-mapping
+[branch "stack/social-security-adapter"]
+	remote = origin
+	merge = refs/heads/stack/social-security-adapter
+[branch "stack/remove-payroll-smoke"]
+	remote = origin
+	merge = refs/heads/stack/remove-payroll-smoke
+[branch "stack/frappe-social-security-integration"]
+	remote = origin
+	merge = refs/heads/stack/frappe-social-security-integration
+	vscode-merge-base = origin/stack/remove-payroll-smoke
+[branch "stack/social-security-frappe-test"]
+	remote = origin
+	merge = refs/heads/stack/social-security-frappe-test
+[branch "stack/social-security-ui-demo"]
+	remote = origin
+	merge = refs/heads/stack/social-security-ui-demo
+	vscode-merge-base = origin/stack/social-security-frappe-test

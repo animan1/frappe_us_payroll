@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 
-from frappe_us_payroll.payroll.components import DeductionRow, EarningRow
+from frappe_us_payroll.payroll.components import DeductionRow
 from frappe_us_payroll.payroll.social_security import (
 	SOCIAL_SECURITY_COMPONENT,
+	EarningRow,
 	apply_social_security_withholding,
 	taxable_wages,
 )
