@@ -10,8 +10,6 @@ These items are intentionally outside the current foundation slice.
 - Define employer-liability persistence without misrepresenting liabilities as employee deductions.
 - Add effective-dated W-4 configuration and opening YTD balances.
 - Add FUTA after defining taxable-wage inputs and liability outputs.
-- Add effective-dated Washington configuration, beginning with one concrete rule.
+- Add state and local rules incrementally after the federal adapter is proven.
 - Build submitted-Salary-Slip component reports for quarterly and year-end reconciliation.
 - Establish an explicit coverage threshold after the first production calculator/adapter boundary exists.
-- Choose and add the repository's complete license text; GPLv3 is the current compatibility assumption.
-- Create the remote GitHub repository and pull request after confirming the target owner/organization.
