@@ -1,0 +1,52 @@
+[project]
+name = "frappe-us-payroll"
+authors = [
+    { name = "Frappe US Payroll contributors" },
+]
+description = "US payroll calculations and localization for Frappe HR"
+requires-python = ">=3.10"
+readme = "README.md"
+license = { file = "license.txt" }
+dynamic = ["version"]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=17.0.0-dev,<18.0.0"
+erpnext = ">=17.0.0-dev,<18.0.0"
+hrms = ">=17.0.0-dev,<18.0.0"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "UP", "W"]
+ignore = ["W191"]
+
+[tool.ruff.format]
+indent-style = "tab"
+quote-style = "double"
+
+[tool.ruff.lint.isort]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "frappe",
+    "erpnext",
+    "hrms",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.isort.sections]
+frappe = ["frappe"]
+erpnext = ["erpnext"]
+hrms = ["hrms"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
