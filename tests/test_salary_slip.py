@@ -1,5 +1,6 @@
 import unittest
 from types import SimpleNamespace
+from typing import Any
 
 from frappe_us_payroll.payroll.salary_slip import set_deduction_amount
 
@@ -8,15 +9,15 @@ TEST_COMPONENT = "US Payroll Smoke Test"
 
 
 class FakeSalarySlip:
-	def __init__(self, deductions):
+	def __init__(self, deductions: list[SimpleNamespace]) -> None:
 		self.deductions = deductions
 
-	def get(self, fieldname):
+	def get(self, fieldname: str) -> Any:
 		return getattr(self, fieldname)
 
 
 class ApplyUSPayrollDeductionsTest(unittest.TestCase):
-	def test_sets_existing_component_to_calculated_amount(self):
+	def test_sets_existing_component_to_calculated_amount(self) -> None:
 		deduction = SimpleNamespace(
 			salary_component=TEST_COMPONENT,
 			amount=0,
@@ -29,7 +30,7 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 		self.assertEqual(deduction.amount, TEST_AMOUNT)
 		self.assertEqual(deduction.default_amount, TEST_AMOUNT)
 
-	def test_does_not_add_or_change_unrelated_deductions(self):
+	def test_does_not_add_or_change_unrelated_deductions(self) -> None:
 		deduction = SimpleNamespace(
 			salary_component="Unrelated Deduction",
 			amount=7.89,

@@ -11,7 +11,7 @@ from frappe_us_payroll.payroll.salary_slip import (
 
 
 class SalarySlipRegionalOverrideTest(UnitTestCase):
-	def test_ui_smoke_mode_is_inert_when_disabled(self):
+	def test_ui_smoke_mode_is_inert_when_disabled(self) -> None:
 		previous_country = frappe.flags.country
 		previous_company = frappe.flags.company
 		previous_smoke_setting = frappe.conf.get(UI_SMOKE_TEST_CONFIG_KEY)
@@ -37,7 +37,7 @@ class SalarySlipRegionalOverrideTest(UnitTestCase):
 			else:
 				frappe.conf[UI_SMOKE_TEST_CONFIG_KEY] = previous_smoke_setting
 
-	def test_smoke_deduction_is_applied_before_net_pay_totals(self):
+	def test_smoke_deduction_is_applied_before_net_pay_totals(self) -> None:
 		previous_country = frappe.flags.country
 		previous_company = frappe.flags.company
 		previous_smoke_setting = frappe.conf.get(UI_SMOKE_TEST_CONFIG_KEY)
