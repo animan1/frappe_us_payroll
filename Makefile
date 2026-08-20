@@ -9,7 +9,7 @@ REDIS_CONTAINER ?= docker-redis-1
 BENCH_DIR ?= /home/frappe/frappe-bench
 RUFF_VERSION ?= 0.12.11
 
-.PHONY: help up down ps logs shell apps versions sync register install migrate remove-prototype enable-tests unit test format format-check lint check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions sync register install migrate remove-prototype enable-tests unit test format format-check lint check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -20,11 +20,33 @@ up: ## Start the existing Frappe development containers without recreating them.
 down: ## Stop the existing Frappe development containers.
 	docker stop $(FRAPPE_CONTAINER) $(REDIS_CONTAINER) $(MARIADB_CONTAINER)
 
+restart: ## Restart the Frappe container after app installation or dependency changes.
+	docker restart $(FRAPPE_CONTAINER)
+	@$(MAKE) wait
+
+wait: ## Wait up to 60 seconds for the configured Frappe site to answer.
+	@for attempt in $$(seq 1 60); do \
+		if curl --fail --silent http://$(SITE):8000/api/method/ping >/dev/null; then \
+			echo "Frappe is ready"; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "Frappe did not become ready within 60 seconds" >&2; \
+	exit 1
+
+health: ## Verify that the configured Frappe site answers HTTP requests.
+	curl --fail --silent --show-error http://$(SITE):8000/api/method/ping
+	@printf "\n"
+
 ps: ## Show the development containers and their current status.
 	docker ps -a --filter name=$(FRAPPE_CONTAINER) --filter name=$(MARIADB_CONTAINER) --filter name=$(REDIS_CONTAINER)
 
 logs: ## Follow the Frappe container log.
 	docker logs --tail 100 --follow $(FRAPPE_CONTAINER)
+
+logs-tail: ## Show recent Frappe container logs without following them.
+	docker logs --tail 200 $(FRAPPE_CONTAINER)
 
 shell: ## Open a shell in the existing Frappe bench container.
 	docker exec --interactive --tty --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bash
@@ -49,6 +71,7 @@ register: sync ## Register the synchronized app with the existing bench.
 install: register ## Install the app package and app on the configured Frappe site (one time per site).
 	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) env/bin/pip install --editable apps/$(APP)
 	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) install-app $(APP)
+	@$(MAKE) restart
 
 migrate: sync ## Synchronize the app and migrate the configured site.
 	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) migrate
