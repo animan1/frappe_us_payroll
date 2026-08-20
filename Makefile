@@ -11,7 +11,7 @@ COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install migrate enable-tests unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install migrate enable-ui-smoke disable-ui-smoke enable-tests unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -74,6 +74,17 @@ install: register ## Install the app package and app on the configured Frappe si
 
 migrate: link ## Migrate the configured site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) migrate
+
+enable-ui-smoke: link ## Create and enable the opt-in $12.34 Salary Slip UI smoke component.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.ensure_ui_smoke_test_component
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) set-config enable_us_payroll_ui_smoke_test true
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) clear-cache
+	@$(MAKE) restart
+
+disable-ui-smoke: ## Disable the Salary Slip UI smoke behavior without deleting linked records.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) set-config enable_us_payroll_ui_smoke_test false
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) clear-cache
+	@$(MAKE) restart
 
 unit: ## Run tests that do not require a Frappe site.
 	python3 -m unittest discover -s tests -p 'test_*.py'

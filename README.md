@@ -25,6 +25,16 @@ make test
 Changes in the working tree are immediately visible through the bind mount. `make test` runs the app's Frappe
 test suite.
 
+### UI integration smoke test
+
+Run `make enable-ui-smoke` to create the `US Payroll Integration Test` deduction and enable its explicit
+development-site behavior. Add that component to a Salary Structure with an amount of zero, then generate or
+recalculate a Salary Slip. The app will replace the amount with `$12.34` before HRMS finalizes totals.
+
+Run `make disable-ui-smoke` when finished. Disabling leaves the Salary Component in place because Frappe may have
+linked it from Salary Structures or test Salary Slips, but it stops changing any amounts. While enabled, a Salary
+Slip missing the component fails validation instead of silently omitting the deduction.
+
 ## License
 
 Frappe US Payroll is licensed under GPL-3.0. Frappe Framework itself is MIT-licensed, while the ERPNext and
@@ -33,4 +43,6 @@ stack license-compatible; the choice is not imposed by Frappe Framework alone.
 
 ## Current state
 
-This change establishes the app and repeatable development workflow. It does not yet add payroll calculations.
+The first integration slice turns the proven `$12.34` Salary Slip experiment into an automated test and an
+explicitly opt-in development-site UI check. The production hook remains inert unless UI smoke mode is enabled;
+no real federal calculator is connected yet.

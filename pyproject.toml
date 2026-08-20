@@ -50,3 +50,5 @@ hrms = ["hrms"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
+mypy_path = ["typings"]
+exclude = ["frappe_us_payroll/payroll/test_.*\\.py$"]
