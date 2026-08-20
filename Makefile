@@ -4,14 +4,12 @@ SHELL := /bin/bash
 APP := frappe_us_payroll
 SITE ?= hrms.localhost
 BENCH_DIR ?= /home/frappe/frappe-bench
-RUFF_VERSION ?= 0.12.11
-MYPY_VERSION ?= 1.17.1
 UV_CACHE_DIR ?= /tmp/frappe-us-payroll-uv-cache
 COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install migrate enable-ui-smoke disable-ui-smoke enable-tests unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install migrate enable-ui-smoke disable-ui-smoke enable-tests deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -86,8 +84,14 @@ disable-ui-smoke: ## Disable the Salary Slip UI smoke behavior without deleting 
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) clear-cache
 	@$(MAKE) restart
 
-unit: ## Run tests that do not require a Frappe site.
-	python3 -m unittest discover -s tests -p 'test_*.py'
+deps-lock: ## Resolve application and development dependencies into uv.lock.
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv lock
+
+deps: ## Install the locked application and development dependencies.
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv sync --all-groups --frozen
+
+unit: deps ## Run tests that do not require a Frappe site.
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --frozen python -m unittest discover -s tests -p 'test_*.py'
 
 enable-tests: ## Enable Frappe tests on the configured development site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) set-config allow_tests true
@@ -95,18 +99,18 @@ enable-tests: ## Enable Frappe tests on the configured development site.
 test: link enable-tests ## Run all app tests against the configured Frappe site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) run-tests --app $(APP)
 
-format: ## Format Python source with the pinned Ruff version.
-	UV_CACHE_DIR=$(UV_CACHE_DIR) uvx --from ruff==$(RUFF_VERSION) ruff format .
-	UV_CACHE_DIR=$(UV_CACHE_DIR) uvx --from ruff==$(RUFF_VERSION) ruff check --fix .
+format: deps ## Format Python source with the locked Ruff version.
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --frozen ruff format .
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --frozen ruff check --fix .
 
-format-check: ## Check Python formatting without changing files.
-	UV_CACHE_DIR=$(UV_CACHE_DIR) uvx --from ruff==$(RUFF_VERSION) ruff format --check .
+format-check: deps ## Check Python formatting without changing files.
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --frozen ruff format --check .
 
-lint: ## Lint Python source with the pinned Ruff version.
-	UV_CACHE_DIR=$(UV_CACHE_DIR) uvx --from ruff==$(RUFF_VERSION) ruff check .
+lint: deps ## Lint Python source with the locked Ruff version.
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --frozen ruff check .
 
-typecheck: ## Type-check Python source with the pinned MyPy version.
-	UV_CACHE_DIR=$(UV_CACHE_DIR) uvx --from mypy==$(MYPY_VERSION) mypy frappe_us_payroll tests
+typecheck: deps ## Type-check Python source with the locked MyPy version.
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --frozen mypy frappe_us_payroll tests
 
 check: format-check lint typecheck unit ## Run the local non-Frappe verification suite.
 
