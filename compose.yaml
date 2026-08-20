@@ -1,0 +1,10 @@
+services:
+  frappe:
+    volumes:
+      - frappe-home:/home/frappe
+      - type: bind
+        source: ${FRAPPE_US_PAYROLL_DIR}
+        target: /workspace/frappe_us_payroll
+
+volumes:
+  frappe-home:

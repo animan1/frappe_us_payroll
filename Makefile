@@ -3,26 +3,27 @@ SHELL := /bin/bash
 
 APP := frappe_us_payroll
 SITE ?= hrms.localhost
-FRAPPE_CONTAINER ?= docker-frappe-1
-MARIADB_CONTAINER ?= docker-mariadb-1
-REDIS_CONTAINER ?= docker-redis-1
 BENCH_DIR ?= /home/frappe/frappe-bench
 RUFF_VERSION ?= 0.12.11
+MYPY_VERSION ?= 1.17.1
 UV_CACHE_DIR ?= /tmp/frappe-us-payroll-uv-cache
+COMPOSE_PROJECT ?= docker
+HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
+COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions sync register install migrate enable-tests unit test format format-check lint check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install migrate enable-tests unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-up: ## Start the existing Frappe development containers without recreating them.
-	docker start $(MARIADB_CONTAINER) $(REDIS_CONTAINER) $(FRAPPE_CONTAINER)
+up: ## Create or start the Frappe development environment.
+	$(COMPOSE) up --detach
 
-down: ## Stop the existing Frappe development containers.
-	docker stop $(FRAPPE_CONTAINER) $(REDIS_CONTAINER) $(MARIADB_CONTAINER)
+down: ## Stop and remove the Frappe development containers.
+	$(COMPOSE) down
 
 restart: ## Restart the Frappe container after app installation or dependency changes.
-	docker restart $(FRAPPE_CONTAINER)
+	$(COMPOSE) restart frappe
 	@$(MAKE) wait
 
 wait: ## Wait up to 60 seconds for the configured Frappe site to answer.
@@ -41,50 +42,47 @@ health: ## Verify that the configured Frappe site answers HTTP requests.
 	@printf "\n"
 
 ps: ## Show the development containers and their current status.
-	docker ps -a --filter name=$(FRAPPE_CONTAINER) --filter name=$(MARIADB_CONTAINER) --filter name=$(REDIS_CONTAINER)
+	$(COMPOSE) ps --all
 
 logs: ## Follow the Frappe container log.
-	docker logs --tail 100 --follow $(FRAPPE_CONTAINER)
+	$(COMPOSE) logs --tail 100 --follow frappe
 
 logs-tail: ## Show recent Frappe container logs without following them.
-	docker logs --tail 200 $(FRAPPE_CONTAINER)
+	$(COMPOSE) logs --tail 200 frappe
 
-shell: ## Open a shell in the existing Frappe bench container.
-	docker exec --interactive --tty --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bash
+shell: ## Open a shell in the Frappe bench container.
+	$(COMPOSE) exec --workdir $(BENCH_DIR) frappe bash
 
 apps: ## List apps installed on the configured Frappe site.
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) list-apps
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) list-apps
 
 versions: ## Show the Frappe bench app versions.
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench version
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench version
 
-sync: ## Copy the working tree's app files into the existing bench container.
-	docker exec $(FRAPPE_CONTAINER) mkdir -p $(BENCH_DIR)/apps/$(APP)/$(APP)
-	docker cp pyproject.toml $(FRAPPE_CONTAINER):$(BENCH_DIR)/apps/$(APP)/pyproject.toml
-	docker cp README.md $(FRAPPE_CONTAINER):$(BENCH_DIR)/apps/$(APP)/README.md
-	docker cp MANIFEST.in $(FRAPPE_CONTAINER):$(BENCH_DIR)/apps/$(APP)/MANIFEST.in
-	docker cp $(APP)/. $(FRAPPE_CONTAINER):$(BENCH_DIR)/apps/$(APP)/$(APP)
+link: ## Link the bind-mounted working tree into the Frappe bench.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bash -c 'test ! -e apps/$(APP) || test -L apps/$(APP)'
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe ln --symbolic --force --no-target-directory /workspace/$(APP) apps/$(APP)
 
-register: sync ## Register the synchronized app with the existing bench.
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) sed -i -e 's/$(APP)//g' -e '/^$$/d' sites/apps.txt
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bash -c 'printf "\n%s\n" "$(APP)" >> sites/apps.txt'
+register: link ## Register the bind-mounted app with the bench.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe sed -i -e 's/$(APP)//g' -e '/^$$/d' sites/apps.txt
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bash -c 'printf "\n%s\n" "$(APP)" >> sites/apps.txt'
 
 install: register ## Install the app package and app on the configured Frappe site (one time per site).
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) env/bin/pip install --editable apps/$(APP)
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) install-app $(APP)
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe env/bin/pip install --editable apps/$(APP)
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) install-app $(APP)
 	@$(MAKE) restart
 
-migrate: sync ## Synchronize the app and migrate the configured site.
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) migrate
+migrate: link ## Migrate the configured site.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) migrate
 
 unit: ## Run tests that do not require a Frappe site.
 	python3 -m unittest discover -s tests -p 'test_*.py'
 
 enable-tests: ## Enable Frappe tests on the configured development site.
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) set-config allow_tests true
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) set-config allow_tests true
 
-test: sync enable-tests ## Run all app tests against the configured Frappe site.
-	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) run-tests --app $(APP)
+test: link enable-tests ## Run all app tests against the configured Frappe site.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) run-tests --app $(APP)
 
 format: ## Format Python source with the pinned Ruff version.
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uvx --from ruff==$(RUFF_VERSION) ruff format .
@@ -96,6 +94,9 @@ format-check: ## Check Python formatting without changing files.
 lint: ## Lint Python source with the pinned Ruff version.
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uvx --from ruff==$(RUFF_VERSION) ruff check .
 
-check: format-check lint unit ## Run the local non-Frappe verification suite.
+typecheck: ## Type-check Python source with the pinned MyPy version.
+	UV_CACHE_DIR=$(UV_CACHE_DIR) uvx --from mypy==$(MYPY_VERSION) mypy frappe_us_payroll tests
+
+check: format-check lint typecheck unit ## Run the local non-Frappe verification suite.
 
 verify: check test ## Run the complete local and Frappe integration verification suite.

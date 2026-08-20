@@ -9,8 +9,9 @@ deposit, scheduling, time clocks, and general HR functionality are intentionally
 
 ## Development
 
-The local development environment uses the existing `hrms.localhost` bench containers. Run `make help`
-for the supported developer operations. In particular:
+The local development environment extends HRMS's Docker Compose configuration. The repository is bind-mounted
+into the Frappe container, and a named volume preserves the bench. Run `make help` for the supported developer
+operations. In particular:
 
 ```console
 make up
@@ -21,7 +22,14 @@ make test
 ```
 
 `make install` is a one-time site operation. Use `make migrate` after subsequent model or fixture changes.
-`make test` synchronizes the working tree into the existing bench and runs the app's Frappe test suite.
+Changes in the working tree are immediately visible through the bind mount. `make test` runs the app's Frappe
+test suite.
+
+## License
+
+Frappe US Payroll is licensed under GPL-3.0. Frappe Framework itself is MIT-licensed, while the ERPNext and
+Frappe HR applications this project integrates with are GPL-3.0. Using GPL-3.0 keeps the complete dependency
+stack license-compatible; the choice is not imposed by Frappe Framework alone.
 
 ## Current state
 
