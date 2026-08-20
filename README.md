@@ -32,7 +32,8 @@ development-site behavior. Add that component to a Salary Structure with an amou
 recalculate a Salary Slip. The app will replace the amount with `$12.34` before HRMS finalizes totals.
 
 Run `make disable-ui-smoke` when finished. Disabling leaves the Salary Component in place because Frappe may have
-linked it from Salary Structures or test Salary Slips, but it stops changing any amounts.
+linked it from Salary Structures or test Salary Slips, but it stops changing any amounts. While enabled, a Salary
+Slip missing the component fails validation instead of silently omitting the deduction.
 
 ## License
 

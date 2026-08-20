@@ -57,11 +57,15 @@ class SalarySlipRegionalOverrideTest(UnitTestCase):
 				"earnings",
 				{"salary_component": "Smoke Test Earnings", "amount": 17.13},
 			)
+			salary_slip.gross_pay = 17.13
+
+			with self.assertRaisesRegex(frappe.ValidationError, UI_SMOKE_TEST_COMPONENT):
+				salary_slip.apply_regional_deductions()
+
 			salary_slip.append(
 				"deductions",
 				{"salary_component": UI_SMOKE_TEST_COMPONENT, "amount": 0},
 			)
-			salary_slip.gross_pay = 17.13
 
 			salary_slip.apply_regional_deductions()
 			salary_slip.set_net_pay()

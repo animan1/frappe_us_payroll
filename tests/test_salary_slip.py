@@ -1,46 +1,56 @@
 import unittest
-from types import SimpleNamespace
-from typing import Any
+from collections.abc import Iterable
+from dataclasses import dataclass
 
-from frappe_us_payroll.payroll.salary_slip import set_deduction_amount
+from frappe_us_payroll.payroll.components import (
+	DeductionRow,
+	MissingSalaryComponentError,
+	set_deduction_amount,
+)
 
 TEST_AMOUNT = 12.34
 TEST_COMPONENT = "US Payroll Smoke Test"
 
 
+@dataclass
+class FakeDeduction:
+	salary_component: str
+	amount: float
+	default_amount: float
+
+
 class FakeSalarySlip:
-	def __init__(self, deductions: list[SimpleNamespace]) -> None:
+	def __init__(self, deductions: list[FakeDeduction]) -> None:
 		self.deductions = deductions
 
-	def get(self, fieldname: str) -> Any:
-		return getattr(self, fieldname)
+	def get(self, fieldname: str) -> Iterable[DeductionRow] | None:
+		return self.deductions if fieldname == "deductions" else None
 
 
 class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 	def test_sets_existing_component_to_calculated_amount(self) -> None:
-		deduction = SimpleNamespace(
+		deduction = FakeDeduction(
 			salary_component=TEST_COMPONENT,
 			amount=0,
 			default_amount=0,
 		)
 
-		found = set_deduction_amount(FakeSalarySlip([deduction]), TEST_COMPONENT, TEST_AMOUNT)
+		set_deduction_amount(FakeSalarySlip([deduction]), TEST_COMPONENT, TEST_AMOUNT)
 
-		self.assertTrue(found)
 		self.assertEqual(deduction.amount, TEST_AMOUNT)
 		self.assertEqual(deduction.default_amount, TEST_AMOUNT)
 
-	def test_does_not_add_or_change_unrelated_deductions(self) -> None:
-		deduction = SimpleNamespace(
+	def test_missing_component_fails_without_changing_unrelated_deductions(self) -> None:
+		deduction = FakeDeduction(
 			salary_component="Unrelated Deduction",
 			amount=7.89,
 			default_amount=7.89,
 		)
 		salary_slip = FakeSalarySlip([deduction])
 
-		found = set_deduction_amount(salary_slip, TEST_COMPONENT, TEST_AMOUNT)
+		with self.assertRaisesRegex(MissingSalaryComponentError, TEST_COMPONENT):
+			set_deduction_amount(salary_slip, TEST_COMPONENT, TEST_AMOUNT)
 
-		self.assertFalse(found)
 		self.assertEqual(deduction.amount, 7.89)
 		self.assertEqual(deduction.default_amount, 7.89)
 		self.assertEqual(len(salary_slip.deductions), 1)

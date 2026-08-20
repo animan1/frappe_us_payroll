@@ -1,28 +1,24 @@
-from typing import Any
+import frappe
+
+from frappe_us_payroll.payroll.components import (
+	MissingSalaryComponentError,
+	SalarySlipDeductions,
+	set_deduction_amount,
+)
 
 UI_SMOKE_TEST_AMOUNT = 12.34
 UI_SMOKE_TEST_COMPONENT = "US Payroll Integration Test"
 UI_SMOKE_TEST_CONFIG_KEY = "enable_us_payroll_ui_smoke_test"
 
 
-def apply_us_payroll_deductions(salary_slip: Any) -> None:
+def apply_us_payroll_deductions(salary_slip: SalarySlipDeductions) -> None:
 	"""Apply US deductions before HRMS finalizes Salary Slip totals.
 
 	The only current behavior is an explicitly enabled development-site smoke
 	test. Ordinary sites remain inert until the first federal calculator is added.
 	"""
-	import frappe
-
 	if frappe.conf.get(UI_SMOKE_TEST_CONFIG_KEY):
-		set_deduction_amount(salary_slip, UI_SMOKE_TEST_COMPONENT, UI_SMOKE_TEST_AMOUNT)
-
-
-def set_deduction_amount(salary_slip: Any, component_name: str, amount: float) -> bool:
-	"""Set an existing deduction row and report whether it was found."""
-	for deduction in salary_slip.get("deductions") or ():
-		if deduction.salary_component == component_name:
-			deduction.amount = amount
-			deduction.default_amount = amount
-			return True
-
-	return False
+		try:
+			set_deduction_amount(salary_slip, UI_SMOKE_TEST_COMPONENT, UI_SMOKE_TEST_AMOUNT)
+		except MissingSalaryComponentError as error:
+			frappe.throw(str(error), exc=frappe.ValidationError, title="Missing Salary Component")
