@@ -4,8 +4,8 @@ Frappe US Payroll is an open-source US payroll calculation and localization laye
 Frappe HR remains responsible for payroll workflow and Salary Slips; this app supplies the missing US
 deduction, liability, employee-configuration, YTD, and reporting integration.
 
-The initial scope is federal payroll plus Washington-specific requirements. Filing, remittance, direct
-deposit, scheduling, time clocks, and general HR functionality are intentionally out of scope.
+The initial scope is federal payroll. Filing, remittance, direct deposit, scheduling, time clocks, and general
+HR functionality are intentionally out of scope.
 
 ## Development
 
