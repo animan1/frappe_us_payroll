@@ -7,6 +7,8 @@ These items are intentionally outside the current foundation slice.
   expected component amounts.
 - Review and help land `python-taxes` pull request #1 for 2026 support.
 - Contribute Additional Medicare threshold-crossing tests and a fix upstream.
+- Add Social Security employer liability only after its rate is represented independently from employee
+  withholding, preferably in `python-taxes`.
 - Define employer-liability persistence without misrepresenting liabilities as employee deductions.
 - Add effective-dated W-4 configuration and opening YTD balances.
 - Add FUTA after defining taxable-wage inputs and liability outputs.
