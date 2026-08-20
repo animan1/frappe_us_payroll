@@ -15,6 +15,10 @@ def get_custom_fields() -> CustomFieldMap:
 				"fieldtype": "Check",
 				"insert_after": "description",
 				"depends_on": 'eval:doc.type == "Earning"',
+				"description": (
+					"Leave checked for wages. Uncheck only when this earning is excluded "
+					"from Social Security wages."
+				),
 				"default": "1",
 			},
 		],

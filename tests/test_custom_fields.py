@@ -24,8 +24,12 @@ class CustomFieldsTest(unittest.TestCase):
 
 	def test_social_security_taxability_defaults_on(self) -> None:
 		component_field = get_custom_fields()["Salary Component"][0]
+		description = component_field["description"]
 
 		self.assertEqual(component_field["default"], "1")
+		if not isinstance(description, str):
+			raise AssertionError("Salary Component field description must be text")
+		self.assertIn("Uncheck", description)
 
 	def test_salary_slip_wages_are_persisted_output(self) -> None:
 		salary_slip_field = get_custom_fields()["Salary Slip"][0]
