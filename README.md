@@ -25,6 +25,9 @@ make test
 Changes in the working tree are immediately visible through the bind mount. `make test` runs the app's Frappe
 test suite.
 
+Run `make deps-lock` after intentionally changing dependencies, and commit the resulting `uv.lock`. Normal
+development and CI use `make deps` through the verification targets and refuse to change the lock.
+
 ### UI integration smoke test
 
 Run `make enable-ui-smoke` to create the `US Payroll Integration Test` deduction and enable its explicit

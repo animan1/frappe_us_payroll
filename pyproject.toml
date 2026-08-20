@@ -8,6 +8,15 @@ requires-python = ">=3.10"
 readme = "README.md"
 license = { file = "license.txt" }
 dynamic = ["version"]
+dependencies = [
+    "python-taxes @ git+https://github.com/rahulaggarwal965/python-taxes.git@631ba1eca6f613fd3ec3cc4ada7d8e844308a71c",
+]
+
+[dependency-groups]
+dev = [
+    "mypy==1.17.1",
+    "ruff==0.12.11",
+]
 
 [build-system]
 requires = ["flit_core >=3.4,<4"]
