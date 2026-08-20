@@ -9,7 +9,7 @@ REDIS_CONTAINER ?= docker-redis-1
 BENCH_DIR ?= /home/frappe/frappe-bench
 RUFF_VERSION ?= 0.12.11
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions sync register install migrate remove-prototype enable-tests unit test format format-check lint check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions sync register install migrate remove-prototype enable-ui-smoke disable-ui-smoke enable-tests unit test format format-check lint check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -79,6 +79,17 @@ migrate: sync ## Synchronize the app and migrate the configured site.
 remove-prototype: ## Uninstall and remove the superseded us_payroll smoke-test app.
 	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) uninstall-app us_payroll --yes
 	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench remove-app us_payroll
+
+enable-ui-smoke: sync ## Create and enable the opt-in $12.34 Salary Slip UI smoke component.
+	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) execute frappe_us_payroll.development.ensure_ui_smoke_test_component
+	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) set-config enable_us_payroll_ui_smoke_test true
+	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) clear-cache
+	@$(MAKE) restart
+
+disable-ui-smoke: ## Disable the Salary Slip UI smoke behavior without deleting linked records.
+	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) set-config enable_us_payroll_ui_smoke_test false
+	docker exec --workdir $(BENCH_DIR) $(FRAPPE_CONTAINER) bench --site $(SITE) clear-cache
+	@$(MAKE) restart
 
 unit: ## Run tests that do not require a Frappe site.
 	python3 -m unittest discover -s tests -p 'test_*.py'

@@ -26,9 +26,10 @@ Register a `regional_overrides` entry for `United States` mapping
 The adapter will mutate Salary Slip components only. HRMS remains responsible for precision, deduction totals,
 net pay, currency conversion, pay-stub rendering, submission workflow, and its native YTD component aggregation.
 
-The production adapter remains inert until a real calculator is connected. An integration test temporarily
-injects the proven `$12.34` fixture through the registered hook and verifies HRMS's native totals; test behavior
-is not shipped as a payroll rule.
+The production adapter remains inert until a real calculator is connected. An integration test enables the
+proven `$12.34` fixture through the registered hook and verifies HRMS's native totals. The same behavior can be
+enabled explicitly on a development site for UI verification; it is disabled by default and clearly named as an
+integration test rather than a payroll rule.
 
 ## Consequences
 
