@@ -7,6 +7,18 @@ deduction, liability, employee-configuration, YTD, and reporting integration.
 The initial scope is federal payroll. Filing, remittance, direct deposit, scheduling, time clocks, and general
 HR functionality are intentionally out of scope.
 
+## Payroll setup
+
+The app marks existing and new earning Salary Components as **Subject to US Social Security** by default. Review
+every earning component during initial setup and whenever a component is added. Leave ordinary wage components,
+including Frappe HR's standard `Basic` component, checked.
+
+Uncheck **Subject to US Social Security** only when the component represents a payment excluded from Social
+Security wages. For example, qualifying business-expense reimbursements under an accountable plan are excluded,
+while payments under a nonaccountable plan are wages. See [IRS Publication 15, section 5 and the special-payment
+table](https://www.irs.gov/publications/p15) and confirm uncertain classifications with the employer's tax
+professional. Later migrations preserve deliberate exclusions.
+
 ## Development
 
 The local development environment extends HRMS's Docker Compose configuration. The repository is bind-mounted
