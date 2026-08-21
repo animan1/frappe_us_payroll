@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import frappe
 
 from frappe_us_payroll.payroll.components import (
@@ -6,7 +8,7 @@ from frappe_us_payroll.payroll.components import (
 	set_deduction_amount,
 )
 
-UI_SMOKE_TEST_AMOUNT = 12.34
+UI_SMOKE_TEST_AMOUNT = Decimal("12.34")
 UI_SMOKE_TEST_COMPONENT = "US Payroll Integration Test"
 UI_SMOKE_TEST_CONFIG_KEY = "enable_us_payroll_ui_smoke_test"
 
