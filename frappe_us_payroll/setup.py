@@ -4,9 +4,22 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from hrms.setup import delete_custom_fields
 
 from frappe_us_payroll.custom_fields import get_custom_fields
+from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
+from frappe_us_payroll.payroll.salary_slip import FIT_COMPONENT
 
 SOCIAL_SECURITY_TAXABLE_CUSTOM_FIELD = "Salary Component-us_social_security_taxable"
-SOCIAL_SECURITY_COMPONENT = "US Social Security"
+
+COMPONENTS = {
+	FIT_COMPONENT: {
+		"salary_component": FIT_COMPONENT,
+		"salary_component_abbr": "FIT",
+	},
+	SOCIAL_SECURITY_COMPONENT: {
+		"salary_component": SOCIAL_SECURITY_COMPONENT,
+		"salary_component_abbr": "FICA",
+		"description": "Employee Social Security tax withheld by Frappe US Payroll",
+	},
+}
 
 
 def install_custom_fields() -> None:
@@ -20,20 +33,19 @@ def install_custom_fields() -> None:
 
 def install_salary_components() -> None:
 	"""Create required app-owned Salary Components without changing existing configuration."""
-	if frappe.db.exists("Salary Component", SOCIAL_SECURITY_COMPONENT):
-		return
+	for component, values in COMPONENTS.items():
+		if frappe.db.exists("Salary Component", component):
+			continue
 
-	frappe.get_doc(
-		{
-			"doctype": "Salary Component",
-			"salary_component": SOCIAL_SECURITY_COMPONENT,
-			"salary_component_abbr": "USSS",
-			"type": "Deduction",
-			"depends_on_payment_days": 0,
-			"remove_if_zero_valued": 0,
-			"description": "Employee Social Security tax withheld by Frappe US Payroll",
-		}
-	).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Salary Component",
+				"type": "Deduction",
+				"depends_on_payment_days": 0,
+				"remove_if_zero_valued": 0,
+				**values,
+			}
+		).insert(ignore_permissions=True)
 
 
 def enable_social_security_for_existing_earnings() -> None:

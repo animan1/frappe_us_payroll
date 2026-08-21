@@ -10,7 +10,8 @@ COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip enable-tests deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip enable-tests deps-lock deps unit test format format-check lint typecheck check verify reset seed
+
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -114,3 +115,13 @@ typecheck: deps ## Type-check Python source with the locked MyPy version.
 check: format-check lint typecheck unit ## Run the local non-Frappe verification suite.
 
 verify: check test ## Run the complete local and Frappe integration verification suite.
+
+reset:
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) reinstall --yes \
+		--admin-password Administrator \
+		--mariadb-root-password 123
+	$(MAKE) migrate
+	$(MAKE) seed
+
+seed:
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.seed

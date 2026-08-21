@@ -1,8 +1,10 @@
 import frappe
 
 from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_slip
+from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 
 from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
+from frappe_us_payroll.payroll.salary_slip import FIT_COMPONENT
 
 DEMO_COMPANY = "Demo Company"
 DEMO_EMPLOYEE_NAME = "US Payroll E2E Employee"
@@ -62,13 +64,14 @@ def _ensure_holiday_list() -> str:
 
 
 def _ensure_employee() -> str:
-	existing_employee = frappe.db.get_value(
-		"Employee",
-		{"employee_name": DEMO_EMPLOYEE_NAME, "company": DEMO_COMPANY},
-		"name",
-	)
-	if isinstance(existing_employee, str):
+	try:
+		existing_employee = frappe.get_doc(
+			"Employee",
+			{"employee_name": DEMO_EMPLOYEE_NAME, "company": DEMO_COMPANY},
+		)
 		return existing_employee
+	except frappe.exceptions.DoesNotExistError:
+		pass
 
 	employee = frappe.get_doc(
 		{
@@ -80,14 +83,15 @@ def _ensure_employee() -> str:
 			"date_of_joining": "2026-01-01",
 			"status": "Active",
 		}
-	).insert(ignore_permissions=True)
-	return employee.name
+	)
+	employee.insert(ignore_permissions=True)
+	return employee
 
 
 def _ensure_holiday_assignment(employee: str, holiday_list: str) -> None:
 	filters: dict[str, str | int] = {
 		"applicable_for": "Employee",
-		"assigned_to": employee,
+		"assigned_to": employee.name,
 		"docstatus": 1,
 	}
 	if frappe.db.exists("Holiday List Assignment", filters):
@@ -97,7 +101,7 @@ def _ensure_holiday_assignment(employee: str, holiday_list: str) -> None:
 		{
 			"doctype": "Holiday List Assignment",
 			"applicable_for": "Employee",
-			"assigned_to": employee,
+			"assigned_to": employee.name,
 			"holiday_list": holiday_list,
 			"from_date": "2026-01-01",
 		}
@@ -115,15 +119,23 @@ def _ensure_salary_structure() -> None:
 			"name": DEMO_STRUCTURE,
 			"company": DEMO_COMPANY,
 			"currency": "USD",
-			"payroll_frequency": "Monthly",
+			"payroll_frequency": "Fortnightly",
 			"is_active": "Yes",
+			"salary_slip_based_on_timesheet": 1,
+			"hour_rate": 17.13,
+			"salary_component": "Basic",
 			"earnings": [
 				{
 					"salary_component": "Basic",
 					"abbr": "B",
-					"amount": 1000,
+					"amount": 0,
 					"depends_on_payment_days": 0,
-				}
+				},
+				{
+					"salary_component": "Tips",
+					"amount": 0,
+					"depends_on_payment_days": 0,
+				},
 			],
 			"deductions": [
 				{
@@ -131,7 +143,13 @@ def _ensure_salary_structure() -> None:
 					"abbr": "USSS",
 					"amount": 0,
 					"depends_on_payment_days": 0,
-				}
+				},
+				{
+					"salary_component": FIT_COMPONENT,
+					"abbr": "FIT",
+					"amount": 0,
+					"depends_on_payment_days": 0,
+				},
 			],
 		}
 	).insert(ignore_permissions=True)
@@ -140,7 +158,7 @@ def _ensure_salary_structure() -> None:
 
 def _ensure_salary_structure_assignment(employee: str) -> None:
 	filters: dict[str, str | int] = {
-		"employee": employee,
+		"employee": employee.name,
 		"salary_structure": DEMO_STRUCTURE,
 		"docstatus": 1,
 	}
@@ -150,12 +168,140 @@ def _ensure_salary_structure_assignment(employee: str) -> None:
 	assignment = frappe.get_doc(
 		{
 			"doctype": "Salary Structure Assignment",
-			"employee": employee,
+			"employee": employee.name,
 			"salary_structure": DEMO_STRUCTURE,
 			"company": DEMO_COMPANY,
 			"currency": "USD",
 			"from_date": "2026-01-01",
 			"base": 1000,
+			"us_social_security_taxable_wages_till_date": 5206.31,
 		}
 	).insert(ignore_permissions=True)
 	assignment.submit()
+
+
+def _ensure_doc(doctype, name, values):
+	if frappe.db.exists(doctype, name):
+		return frappe.get_doc(doctype, name)
+
+	frappe.get_doc(
+		{
+			"doctype": doctype,
+			"name": name,
+			**values,
+		}
+	).insert(ignore_permissions=True)
+
+
+def _ensure_setup_complete():
+	if frappe.is_setup_complete():
+		return
+
+	setup_complete(
+		{
+			"language": "English",
+			"email": "admin@example.com",
+			"full_name": "Administrator",
+			"password": "Administrator",
+			"country": "United States",
+			"timezone": "America/Los_Angeles",
+			"currency": "USD",
+			"enable_telemetry": 0,
+			"fy_start_date": "2026-01-01",
+			"fy_end_date": "2026-12-31",
+			"company_name": DEMO_COMPANY,
+			"company_abbr": "D",
+		}
+	)
+
+
+def _seed_company():
+	_ensure_doc(
+		"Company",
+		DEMO_COMPANY,
+		{
+			"abbr": "D",
+			"default_currency": "USD",
+			"country": "United States",
+			"company_name": DEMO_COMPANY,
+		},
+	)
+
+
+def _seed_salary_components():
+	doc_type = "Salary Component"
+	tips_comp = "Tips"
+	_ensure_doc(
+		doc_type,
+		tips_comp,
+		{
+			"salary_component": tips_comp,
+			"type": "Earning",
+			"is_tax_applicable": 1,
+			"depends_on_payment_days": 0,
+			"us_social_security_taxable": 1,
+		},
+	)
+	for ded in (SOCIAL_SECURITY_COMPONENT, FIT_COMPONENT):
+		_ensure_doc(
+			doc_type,
+			ded,
+			{
+				"salary_component": ded,
+				"type": "Deduction",
+			},
+		)
+
+
+def _seed_timesheet(employee):
+	if frappe.db.exists(
+		"Timesheet",
+		{
+			"employee": employee.name,
+		},
+	):
+		return
+	activity_type = "Execution"
+	doc = frappe.get_doc(
+		{
+			"doctype": "Timesheet",
+			"employee": employee.name,
+			"time_logs": [
+				{
+					"activity_type": activity_type,
+					"from_time": "2026-08-03 16:00:00",
+					"to_time": "2026-08-03 23:00:00",
+					"hours": 7,
+				},
+				{
+					"activity_type": activity_type,
+					"from_time": "2026-08-06 12:00:00",
+					"to_time": "2026-08-06 21:30:00",
+					"hours": 9.5,
+				},
+				{
+					"activity_type": activity_type,
+					"from_time": "2026-08-08 13:00:00",
+					"to_time": "2026-08-08 21:00:00",
+					"hours": 8,
+				},
+			],
+		}
+	)
+
+	doc.insert(ignore_permissions=True)
+	doc.submit()
+
+
+def seed():
+	_ensure_setup_complete()
+	_seed_company()
+	_seed_salary_components()
+	_ensure_salary_structure()
+	holiday_list = _ensure_holiday_list()
+	employee = _ensure_employee()
+	_ensure_holiday_assignment(employee, holiday_list)
+	_ensure_salary_structure_assignment(employee)
+	_seed_timesheet(employee)
+
+	frappe.db.commit()

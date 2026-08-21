@@ -1,17 +1,23 @@
 from datetime import date
-from decimal import Decimal
-from typing import Protocol, cast
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Protocol, Set, cast
 
 import frappe
 
-from frappe_us_payroll.payroll.components import MissingSalaryComponentError
+from frappe_us_payroll.federal.social_security import CENT
+from frappe_us_payroll.payroll.components import MissingSalaryComponentError, set_deduction_amount
 from frappe_us_payroll.payroll.social_security import (
 	SocialSecuritySalarySlip,
 	apply_social_security_withholding,
+	taxable_wages,
+	_posting_date,
+	as_frappe_currency,
 )
+from python_taxes.federal import income
 
 OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
 SLIP_WAGES_FIELD = "us_social_security_taxable_wages"
+FIT_COMPONENT = "US - Federal Income Tax"
 
 
 class SalaryStructureAssignment(Protocol):
@@ -27,14 +33,49 @@ class FrappeSalarySlip(SocialSecuritySalarySlip, Protocol):
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 	"""Apply supported US deductions through HRMS's regional extension point."""
 	try:
+		prior_taxable_wages = _prior_social_security_wages(salary_slip)
+		opening_taxable_wages = _decimal(salary_slip._salary_structure_assignment.get(OPENING_WAGES_FIELD))
 		apply_social_security_withholding(
 			salary_slip,
 			taxable_components=_taxable_social_security_components(),
-			prior_taxable_wages=_prior_social_security_wages(salary_slip),
-			opening_taxable_wages=_decimal(salary_slip._salary_structure_assignment.get(OPENING_WAGES_FIELD)),
+			prior_taxable_wages=prior_taxable_wages,
+			opening_taxable_wages=opening_taxable_wages,
+		)
+		_apply_fit_withholding(
+			salary_slip,
+			taxable_components=_taxable_social_security_components(),
+			prior_taxable_wages=prior_taxable_wages,
+			opening_taxable_wages=opening_taxable_wages,
 		)
 	except MissingSalaryComponentError as error:
 		frappe.throw(str(error), exc=frappe.ValidationError, title="US Payroll Configuration Required")
+
+
+def _apply_fit_withholding(
+	salary_slip: SocialSecuritySalarySlip,
+	*,
+	taxable_components: Set[str],
+	prior_taxable_wages: Decimal,
+	opening_taxable_wages: Decimal,
+) -> Decimal:
+	current_taxable_wages = taxable_wages(salary_slip.earnings, taxable_components).quantize(
+		CENT, rounding=ROUND_HALF_UP
+	)
+	withholding = income.employer_withholding(
+		taxable_wages=current_taxable_wages,
+		pay_frequency="biweekly",
+		filing_status="single",
+		multiple_jobs=False,
+		tax_credits=0,
+		other_income=0,
+		deductions=0,
+		extra_withholding=0,
+		tax_year=_posting_date(salary_slip.posting_date).year,
+		rounded=False,
+	)
+
+	set_deduction_amount(salary_slip, FIT_COMPONENT, withholding)
+	return withholding
 
 
 def _taxable_social_security_components() -> set[str]:
@@ -67,3 +108,15 @@ def _date(value: date | str) -> date:
 
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
+
+
+@frappe.whitelist()
+def recalculate(salary_slip):
+	if isinstance(salary_slip, str):
+		salary_slip = frappe.parse_json(salary_slip)
+
+	doc = frappe.get_doc(salary_slip)
+
+	apply_us_payroll_deductions(doc)
+
+	return {"deductions": [row.as_dict() for row in doc.deductions]}
