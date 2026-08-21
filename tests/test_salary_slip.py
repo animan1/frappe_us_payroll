@@ -1,6 +1,7 @@
 import unittest
 from collections.abc import Iterable
 from dataclasses import dataclass
+from decimal import Decimal
 
 from frappe_us_payroll.payroll.components import (
 	DeductionRow,
@@ -8,7 +9,7 @@ from frappe_us_payroll.payroll.components import (
 	set_deduction_amount,
 )
 
-TEST_AMOUNT = 12.34
+TEST_AMOUNT = Decimal("12.34")
 TEST_COMPONENT = "US Payroll Smoke Test"
 
 
@@ -37,8 +38,8 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 
 		set_deduction_amount(FakeSalarySlip([deduction]), TEST_COMPONENT, TEST_AMOUNT)
 
-		self.assertEqual(deduction.amount, TEST_AMOUNT)
-		self.assertEqual(deduction.default_amount, TEST_AMOUNT)
+		self.assertEqual(deduction.amount, 12.34)
+		self.assertEqual(deduction.default_amount, 12.34)
 
 	def test_missing_component_fails_without_changing_unrelated_deductions(self) -> None:
 		deduction = FakeDeduction(
