@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import frappe
 
 from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_slip
@@ -193,6 +195,35 @@ def _ensure_doc(doctype, name, values):
 	).insert(ignore_permissions=True)
 
 
+def _seed_tips(employee):
+	doc_type = "Additional Salary"
+	payroll_date = "2026-08-15"
+	amount = Decimal("288.98")
+	payload = {
+		"employee": employee.name,
+		"salary_component": "Tips",
+		"payroll_date": payroll_date,
+	}
+	existing = frappe.db.exists(doc_type, {"docstatus": ("!=", 2), **payload})
+	if existing:
+		return frappe.get_doc("Additional Salary", existing)
+
+	doc = frappe.get_doc(
+		{
+			"doctype": doc_type,
+			"company": DEMO_COMPANY,
+			"employee_name": employee.employee_name,
+			"amount": amount,
+			"overwrite_salary_structure_amount": 0,
+			**payload,
+		}
+	)
+	doc.insert(ignore_permissions=True)
+	doc.submit()
+
+	return doc
+
+
 def _ensure_setup_complete():
 	if frappe.is_setup_complete():
 		return
@@ -303,5 +334,6 @@ def seed():
 	_ensure_holiday_assignment(employee, holiday_list)
 	_ensure_salary_structure_assignment(employee)
 	_seed_timesheet(employee)
+	_seed_tips(employee)
 
 	frappe.db.commit()

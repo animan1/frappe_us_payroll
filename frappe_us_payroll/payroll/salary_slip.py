@@ -4,6 +4,7 @@ from typing import Protocol, Set, cast
 
 import frappe
 
+from frappe_us_payroll.custom_fields import FILING_STATUS
 from frappe_us_payroll.federal.social_security import CENT
 from frappe_us_payroll.payroll.components import MissingSalaryComponentError, set_deduction_amount
 from frappe_us_payroll.payroll.social_security import (
@@ -61,15 +62,22 @@ def _apply_fit_withholding(
 	current_taxable_wages = taxable_wages(salary_slip.earnings, taxable_components).quantize(
 		CENT, rounding=ROUND_HALF_UP
 	)
+	employee = frappe.get_doc("Employee", salary_slip.employee)
+	filing_status = FILING_STATUS[employee.us_w4_filing_status]
+	if not filing_status:
+		frappe.throw(
+			"Filing status not set for employee", exc=frappe.ValidationError, title="Filing Status Required"
+		)
 	withholding = income.employer_withholding(
 		taxable_wages=current_taxable_wages,
+		# FIXME
 		pay_frequency="biweekly",
-		filing_status="single",
-		multiple_jobs=False,
-		tax_credits=0,
-		other_income=0,
-		deductions=0,
-		extra_withholding=0,
+		filing_status=filing_status,
+		multiple_jobs=bool(employee.us_w4_step_2),
+		tax_credits=_decimal(employee.us_w4_dependents_amount or 0),
+		other_income=_decimal(employee.us_w4_other_income or 0),
+		deductions=_decimal(employee.us_w4_deductions or 0),
+		extra_withholding=_decimal(employee.us_w4_extra_withholding or 0),
 		tax_year=_posting_date(salary_slip.posting_date).year,
 		rounded=False,
 	)

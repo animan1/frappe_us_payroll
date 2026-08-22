@@ -3,11 +3,66 @@ from typing import TypeAlias
 CustomFieldValue: TypeAlias = str | int
 CustomFieldDefinition: TypeAlias = dict[str, CustomFieldValue]
 CustomFieldMap: TypeAlias = dict[str, list[CustomFieldDefinition]]
+FILING_STATUS = {
+	"": "",
+	"Single or Married filing separately": "single",
+	"Married filing jointly or Qualifying surviving spouse": "married",
+	"Head of household": "hoh",
+}
 
 
 def get_custom_fields() -> CustomFieldMap:
 	"""Return the persisted inputs and outputs needed for Social Security wages."""
 	return {
+		"Employee": [
+			{
+				"fieldname": "us_w4_section",
+				"label": "US Federal Withholding",
+				"fieldtype": "Section Break",
+				"insert_after": "payroll_cost_center",
+			},
+			{
+				"fieldname": "us_w4_filing_status",
+				"label": "W-4 Filing Status",
+				"fieldtype": "Select",
+				"options": "\n".join(FILING_STATUS.keys()),
+				"insert_after": "us_w4_section",
+			},
+			{
+				"fieldname": "us_w4_step_2",
+				"label": "Step 2: Multiple Jobs / Spouse Works",
+				"fieldtype": "Check",
+				"insert_after": "us_w4_filing_status",
+			},
+			{
+				"fieldname": "us_w4_dependents_amount",
+				"label": "Step 3: Dependents and Other Credits",
+				"fieldtype": "Currency",
+				"default": "0",
+				"insert_after": "us_w4_step_2",
+			},
+			{
+				"fieldname": "us_w4_other_income",
+				"label": "Step 4(a): Other Income",
+				"fieldtype": "Currency",
+				"default": "0",
+				"insert_after": "us_w4_dependents_amount",
+			},
+			{
+				"fieldname": "us_w4_deductions",
+				"label": "Step 4(b): Deductions",
+				"fieldtype": "Currency",
+				"default": "0",
+				"insert_after": "us_w4_other_income",
+			},
+			{
+				"fieldname": "us_w4_extra_withholding",
+				"label": "Step 4(c): Extra Withholding",
+				"fieldtype": "Currency",
+				"default": "0",
+				"insert_after": "us_w4_deductions",
+			},
+		],
 		"Salary Component": [
 			{
 				"fieldname": "us_social_security_taxable",
