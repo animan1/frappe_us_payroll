@@ -8,8 +8,14 @@ from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
 from frappe_us_payroll.payroll.salary_slip import FIT_COMPONENT
 
 SOCIAL_SECURITY_TAXABLE_CUSTOM_FIELD = "Salary Component-us_social_security_taxable"
-
+MEDICARE_COMPONENT = "Medicare"
 COMPONENTS = {
+	MEDICARE_COMPONENT: {
+		"salary_component": MEDICARE_COMPONENT,
+		"salary_component_abbr": "Med",
+		"amount_based_on_formula": 1,
+		"formula": "gross_pay * .0145",
+	},
 	FIT_COMPONENT: {
 		"salary_component": FIT_COMPONENT,
 		"salary_component_abbr": "FIT",

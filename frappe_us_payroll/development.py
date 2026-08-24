@@ -7,6 +7,7 @@ from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 
 from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
 from frappe_us_payroll.payroll.salary_slip import FIT_COMPONENT
+from frappe_us_payroll.setup import MEDICARE_COMPONENT
 
 DEMO_COMPANY = "Demo Company"
 DEMO_EMPLOYEE_NAME = "US Payroll E2E Employee"
@@ -69,7 +70,10 @@ def _ensure_employee() -> str:
 	try:
 		existing_employee = frappe.get_doc(
 			"Employee",
-			{"employee_name": DEMO_EMPLOYEE_NAME, "company": DEMO_COMPANY},
+			{
+				"employee_name": DEMO_EMPLOYEE_NAME,
+				"company": DEMO_COMPANY,
+			},
 		)
 		return existing_employee
 	except frappe.exceptions.DoesNotExistError:
@@ -84,6 +88,7 @@ def _ensure_employee() -> str:
 			"date_of_birth": "1990-01-01",
 			"date_of_joining": "2026-01-01",
 			"status": "Active",
+			"us_w4_filing_status": "Single or Married filing separately",
 		}
 	)
 	employee.insert(ignore_permissions=True)
@@ -113,6 +118,7 @@ def _ensure_holiday_assignment(employee: str, holiday_list: str) -> None:
 
 def _ensure_salary_structure() -> None:
 	if frappe.db.exists("Salary Structure", DEMO_STRUCTURE):
+		print(frappe.get_doc("Salary Structure", DEMO_STRUCTURE))
 		return
 
 	structure = frappe.get_doc(
@@ -151,6 +157,14 @@ def _ensure_salary_structure() -> None:
 					"abbr": "FIT",
 					"amount": 0,
 					"depends_on_payment_days": 0,
+				},
+				{
+					"salary_component": MEDICARE_COMPONENT,
+					"abbr": "Med",
+					"amount": 0,
+					"depends_on_payment_days": 0,
+					"amount_based_on_formula": 1,
+					"formula": "gross_pay * .0145",
 				},
 			],
 		}
@@ -273,14 +287,16 @@ def _seed_salary_components():
 			"us_social_security_taxable": 1,
 		},
 	)
-	for ded in (SOCIAL_SECURITY_COMPONENT, FIT_COMPONENT):
-		_ensure_doc(
-			doc_type,
-			ded,
-			{
-				"salary_component": ded,
-				"type": "Deduction",
-			},
+	for ded in (SOCIAL_SECURITY_COMPONENT, FIT_COMPONENT, MEDICARE_COMPONENT):
+		print(
+			_ensure_doc(
+				doc_type,
+				ded,
+				{
+					"salary_component": ded,
+					"type": "Deduction",
+				},
+			).__dict__
 		)
 
 
