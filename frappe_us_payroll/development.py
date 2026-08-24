@@ -7,7 +7,14 @@ from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 
 from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
 from frappe_us_payroll.payroll.salary_slip import FIT_COMPONENT
-from frappe_us_payroll.setup import MEDICARE_COMPONENT
+from frappe_us_payroll.setup import (
+	COMPONENTS,
+	LI_EMPLOYEE_COMPONENT,
+	MEDICARE_COMPONENT,
+	PFML_COMPONENT,
+	TIPS_PAID_COMPONENT,
+	WA_CARES_COMPONENT,
+)
 
 DEMO_COMPANY = "Demo Company"
 DEMO_EMPLOYEE_NAME = "US Payroll E2E Employee"
@@ -116,6 +123,12 @@ def _ensure_holiday_assignment(employee: str, holiday_list: str) -> None:
 	assignment.submit()
 
 
+def _component_to_structure(comp_name):
+	comp = dict(COMPONENTS[comp_name])
+	comp["abbr"] = comp.pop("salary_component_abbr")
+	return {"amount": 0, "depends_on_payment_days": 0, **comp}
+
+
 def _ensure_salary_structure() -> None:
 	if frappe.db.exists("Salary Structure", DEMO_STRUCTURE):
 		print(frappe.get_doc("Salary Structure", DEMO_STRUCTURE))
@@ -141,6 +154,7 @@ def _ensure_salary_structure() -> None:
 				},
 				{
 					"salary_component": "Tips",
+					"abbr": "T",
 					"amount": 0,
 					"depends_on_payment_days": 0,
 				},
@@ -166,6 +180,10 @@ def _ensure_salary_structure() -> None:
 					"amount_based_on_formula": 1,
 					"formula": "gross_pay * .0145",
 				},
+				_component_to_structure(LI_EMPLOYEE_COMPONENT),
+				_component_to_structure(WA_CARES_COMPONENT),
+				_component_to_structure(PFML_COMPONENT),
+				_component_to_structure(TIPS_PAID_COMPONENT),
 			],
 		}
 	).insert(ignore_permissions=True)

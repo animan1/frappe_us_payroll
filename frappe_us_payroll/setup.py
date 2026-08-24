@@ -4,12 +4,40 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from hrms.setup import delete_custom_fields
 
 from frappe_us_payroll.custom_fields import get_custom_fields
-from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
 from frappe_us_payroll.payroll.salary_slip import FIT_COMPONENT
+from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
 
 SOCIAL_SECURITY_TAXABLE_CUSTOM_FIELD = "Salary Component-us_social_security_taxable"
 MEDICARE_COMPONENT = "Medicare"
+LI_EMPLOYEE_COMPONENT = "WA - L&I - Employee (Taproom)"
+WA_CARES_COMPONENT = "WA - WA Cares"
+PFML_COMPONENT = "WA - Paid Family and Medical Leave - Employee"
+TIPS_PAID_COMPONENT = "Tips Already Paid"
 COMPONENTS = {
+	TIPS_PAID_COMPONENT: {
+		"salary_component": TIPS_PAID_COMPONENT,
+		"salary_component_abbr": "TP",
+		"amount_based_on_formula": 1,
+		"formula": "T",
+	},
+	PFML_COMPONENT: {
+		"salary_component": PFML_COMPONENT,
+		"salary_component_abbr": "PFML",
+		"amount_based_on_formula": 1,
+		"formula": "B * .00807159",
+	},
+	WA_CARES_COMPONENT: {
+		"salary_component": WA_CARES_COMPONENT,
+		"salary_component_abbr": "WAC",
+		"amount_based_on_formula": 1,
+		"formula": "B * .0058",
+	},
+	LI_EMPLOYEE_COMPONENT: {
+		"salary_component": LI_EMPLOYEE_COMPONENT,
+		"salary_component_abbr": "LIE",
+		"amount_based_on_formula": 1,
+		"formula": "total_working_hours * .1755",
+	},
 	MEDICARE_COMPONENT: {
 		"salary_component": MEDICARE_COMPONENT,
 		"salary_component_abbr": "Med",
