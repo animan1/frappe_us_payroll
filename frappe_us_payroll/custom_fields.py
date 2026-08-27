@@ -94,6 +94,16 @@ def get_custom_fields() -> CustomFieldMap:
 				"non_negative": 1,
 				"allow_on_submit": 1,
 			},
+			{
+				"fieldname": "futa_calculated",
+				"label": "FUTA Calculated",
+				"fieldtype": "Currency",
+				"insert_after": "us_social_security_taxable_wages_till_date",
+				"description": "",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
 		],
 		"Salary Slip": [
 			{
@@ -102,6 +112,16 @@ def get_custom_fields() -> CustomFieldMap:
 				"fieldtype": "Currency",
 				"insert_after": "gross_pay",
 				"description": "Wages from this slip subject to US Social Security",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
+			{
+				"fieldname": "futa_calculated",
+				"label": "FUTA Calculated",
+				"fieldtype": "Currency",
+				"insert_after": "employer_contributions",
+				"description": "",
 				"options": "currency",
 				"read_only": 1,
 				"no_copy": 1,

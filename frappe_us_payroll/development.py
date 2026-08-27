@@ -1,16 +1,23 @@
 from decimal import Decimal
 
 import frappe
-
-from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_slip
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 
-from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
+from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_slip
+
+from frappe_us_payroll.payroll.components import DEDUCTIONS, EMPLOYER_CONTRIBUTIONS
 from frappe_us_payroll.payroll.salary_slip import FIT_COMPONENT
+from frappe_us_payroll.payroll.social_security import (
+	SOCIAL_SECURITY_EMPLOYEE_COMPONENT,
+	SOCIAL_SECURITY_EMPLOYER_COMPONENT,
+)
 from frappe_us_payroll.setup import (
 	COMPONENTS,
+	FUTA_COMPONENT,
 	LI_EMPLOYEE_COMPONENT,
-	MEDICARE_COMPONENT,
+	LI_EMPLOYER_COMPONENT,
+	MEDICARE_EMPLOYEE_COMPONENT,
+	MEDICARE_EMPLOYER_COMPONENT,
 	PFML_COMPONENT,
 	TIPS_PAID_COMPONENT,
 	WA_CARES_COMPONENT,
@@ -130,8 +137,10 @@ def _component_to_structure(comp_name):
 
 
 def _ensure_salary_structure() -> None:
-	if frappe.db.exists("Salary Structure", DEMO_STRUCTURE):
-		print(frappe.get_doc("Salary Structure", DEMO_STRUCTURE))
+	# name = "a"
+	name = DEMO_STRUCTURE
+	if frappe.db.exists("Salary Structure", name):
+		print(frappe.get_doc("Salary Structure", name).__dict__)
 		return
 
 	structure = frappe.get_doc(
@@ -159,31 +168,25 @@ def _ensure_salary_structure() -> None:
 					"depends_on_payment_days": 0,
 				},
 			],
-			"deductions": [
-				{
-					"salary_component": SOCIAL_SECURITY_COMPONENT,
-					"abbr": "USSS",
-					"amount": 0,
-					"depends_on_payment_days": 0,
-				},
+			DEDUCTIONS: [
+				_component_to_structure(SOCIAL_SECURITY_EMPLOYEE_COMPONENT),
 				{
 					"salary_component": FIT_COMPONENT,
 					"abbr": "FIT",
 					"amount": 0,
 					"depends_on_payment_days": 0,
 				},
-				{
-					"salary_component": MEDICARE_COMPONENT,
-					"abbr": "Med",
-					"amount": 0,
-					"depends_on_payment_days": 0,
-					"amount_based_on_formula": 1,
-					"formula": "gross_pay * .0145",
-				},
+				_component_to_structure(MEDICARE_EMPLOYEE_COMPONENT),
 				_component_to_structure(LI_EMPLOYEE_COMPONENT),
 				_component_to_structure(WA_CARES_COMPONENT),
 				_component_to_structure(PFML_COMPONENT),
 				_component_to_structure(TIPS_PAID_COMPONENT),
+			],
+			EMPLOYER_CONTRIBUTIONS: [
+				_component_to_structure(SOCIAL_SECURITY_EMPLOYER_COMPONENT),
+				_component_to_structure(MEDICARE_EMPLOYER_COMPONENT),
+				_component_to_structure(FUTA_COMPONENT),
+				_component_to_structure(LI_EMPLOYER_COMPONENT),
 			],
 		}
 	).insert(ignore_permissions=True)
@@ -305,17 +308,17 @@ def _seed_salary_components():
 			"us_social_security_taxable": 1,
 		},
 	)
-	for ded in (SOCIAL_SECURITY_COMPONENT, FIT_COMPONENT, MEDICARE_COMPONENT):
-		print(
-			_ensure_doc(
-				doc_type,
-				ded,
-				{
-					"salary_component": ded,
-					"type": "Deduction",
-				},
-			).__dict__
-		)
+	# for ded in (FIT_COMPONENT, MEDICARE_COMPONENT):
+	# 	print(
+	# 		_ensure_doc(
+	# 			doc_type,
+	# 			ded,
+	# 			{
+	# 				"salary_component": ded,
+	# 				"type": "Deduction",
+	# 			},
+	# 		).__dict__
+	# 	)
 
 
 def _seed_timesheet(employee):

@@ -18,3 +18,8 @@ regional_overrides = {
 		),
 	}
 }
+doc_events = {
+	"Salary Slip": {
+		"validate": "frappe_us_payroll.payroll.salary_slip.apply_us_employer_contributions",
+	},
+}

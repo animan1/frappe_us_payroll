@@ -3,6 +3,10 @@ from decimal import Decimal
 from typing import Protocol
 
 
+DEDUCTIONS = "deductions"
+EMPLOYER_CONTRIBUTIONS = "employer_contributions"
+
+
 class EarningRow(Protocol):
 	salary_component: str
 	amount: float
@@ -28,19 +32,23 @@ class MissingSalaryComponentError(LookupError):
 		super().__init__(f"Required deduction component '{component_name}' is missing from the Salary Slip")
 
 
-def set_deduction_amount(
+def set_component_amount(
 	salary_slip: SalarySlipDeductions,
+	component_type: str,
 	component_name: str,
 	amount: Decimal,
 ) -> None:
 	"""Set an exact deduction result at Frappe's float-valued document boundary."""
 	frappe_amount = as_frappe_currency(amount)
-	for deduction in salary_slip.get("deductions") or ():
-		if deduction.salary_component == component_name:
-			deduction.amount = frappe_amount
-			deduction.default_amount = frappe_amount
+	components = salary_slip.get(component_type)
+	if components is None:
+		components = salary_slip._evaluated_components[component_type]
+	for comp in components:
+		if comp.salary_component == component_name:
+			comp.amount = frappe_amount
+			comp.default_amount = frappe_amount
 			return
-
+	raise ValueError(salary_slip.as_dict())
 	raise MissingSalaryComponentError(component_name)
 
 

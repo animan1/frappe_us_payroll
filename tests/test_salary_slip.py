@@ -6,7 +6,7 @@ from decimal import Decimal
 from frappe_us_payroll.payroll.components import (
 	DeductionRow,
 	MissingSalaryComponentError,
-	set_deduction_amount,
+	set_component_amount,
 )
 
 TEST_AMOUNT = Decimal("12.34")
@@ -36,7 +36,7 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 			default_amount=0,
 		)
 
-		set_deduction_amount(FakeSalarySlip([deduction]), TEST_COMPONENT, TEST_AMOUNT)
+		set_component_amount(FakeSalarySlip([deduction]), TEST_COMPONENT, TEST_AMOUNT)
 
 		self.assertEqual(deduction.amount, 12.34)
 		self.assertEqual(deduction.default_amount, 12.34)
@@ -50,7 +50,7 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 		salary_slip = FakeSalarySlip([deduction])
 
 		with self.assertRaisesRegex(MissingSalaryComponentError, TEST_COMPONENT):
-			set_deduction_amount(salary_slip, TEST_COMPONENT, TEST_AMOUNT)
+			set_component_amount(salary_slip, TEST_COMPONENT, TEST_AMOUNT)
 
 		self.assertEqual(deduction.amount, 7.89)
 		self.assertEqual(deduction.default_amount, 7.89)
