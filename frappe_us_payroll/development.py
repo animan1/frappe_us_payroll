@@ -19,6 +19,7 @@ from frappe_us_payroll.setup import (
 	MEDICARE_EMPLOYEE_COMPONENT,
 	MEDICARE_EMPLOYER_COMPONENT,
 	PFML_COMPONENT,
+	SUTA_COMPONENT,
 	TIPS_PAID_COMPONENT,
 	WA_CARES_COMPONENT,
 )
@@ -187,6 +188,7 @@ def _ensure_salary_structure() -> None:
 				_component_to_structure(MEDICARE_EMPLOYER_COMPONENT),
 				_component_to_structure(FUTA_COMPONENT),
 				_component_to_structure(LI_EMPLOYER_COMPONENT),
+				_component_to_structure(SUTA_COMPONENT),
 			],
 		}
 	).insert(ignore_permissions=True)
@@ -363,14 +365,14 @@ def _seed_timesheet(employee):
 
 def seed():
 	_ensure_setup_complete()
-	_seed_company()
-	_seed_salary_components()
-	_ensure_salary_structure()
-	holiday_list = _ensure_holiday_list()
-	employee = _ensure_employee()
-	_ensure_holiday_assignment(employee, holiday_list)
-	_ensure_salary_structure_assignment(employee)
-	_seed_timesheet(employee)
-	_seed_tips(employee)
+	# _seed_company()
+	# _seed_salary_components()
+	# _ensure_salary_structure()
+	# holiday_list = _ensure_holiday_list()
+	# employee = _ensure_employee()
+	# _ensure_holiday_assignment(employee, holiday_list)
+	# _ensure_salary_structure_assignment(employee)
+	# _seed_timesheet(employee)
+	# _seed_tips(employee)
 
 	frappe.db.commit()

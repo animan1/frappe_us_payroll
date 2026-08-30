@@ -125,6 +125,7 @@ def get_custom_fields() -> CustomFieldMap:
 				"options": "currency",
 				"read_only": 1,
 				"no_copy": 1,
+				"print_hide": 1,
 			},
 		],
 	}

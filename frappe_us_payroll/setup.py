@@ -18,6 +18,7 @@ LI_EMPLOYEE_COMPONENT = "WA - L&I - Employee (Taproom)"
 LI_EMPLOYER_COMPONENT = "WA - L&I - Employer (Taproom)"
 WA_CARES_COMPONENT = "WA - WA Cares"
 PFML_COMPONENT = "WA - Paid Family and Medical Leave - Employee"
+SUTA_COMPONENT = "WA - Unemployment Insurance"
 TIPS_PAID_COMPONENT = "Tips Already Paid"
 
 
@@ -66,7 +67,11 @@ COMPONENTS = {
 		MEDICARE_EMPLOYER_COMPONENT, "Med_C", formula="Med_D"
 	),
 	FUTA_COMPONENT: _employer_contribution(FUTA_COMPONENT, "FUTA", formula="futa_calculated"),
-	LI_EMPLOYER_COMPONENT: _deduction(LI_EMPLOYER_COMPONENT, "LIR", formula="total_working_hours * .4046"),
+	LI_EMPLOYER_COMPONENT: _employer_contribution(
+		LI_EMPLOYER_COMPONENT, "LIR", formula="total_working_hours * .4046"
+	),
+	# FIXME: there is actually a cap, just not one we hit, so this is a shortcut to get this thing working quickly
+	SUTA_COMPONENT: _employer_contribution(SUTA_COMPONENT, "SUTA", formula="gross_pay * .012"),
 }
 
 
