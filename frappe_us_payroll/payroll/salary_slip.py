@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 from typing import Protocol, cast
 
@@ -13,20 +12,13 @@ from frappe_us_payroll.payroll.social_security import (
 	apply_social_security_withholding,
 	taxable_wages,
 )
-
-OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
-SLIP_WAGES_FIELD = "us_social_security_taxable_wages"
-
-
-class SalaryStructureAssignment(Protocol):
-	def get(self, fieldname: str) -> str | int | float | None: ...
+from frappe_us_payroll.payroll.ytd import GetAll, prior_taxable_wages
 
 
 class FrappeSalarySlip(SocialSecuritySalarySlip, Protocol):
 	name: str
 	employee: str
 	payroll_frequency: str
-	_salary_structure_assignment: SalaryStructureAssignment
 
 
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
@@ -37,8 +29,14 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 		apply_social_security_withholding(
 			salary_slip,
 			taxable_components=taxable_components,
-			prior_taxable_wages=_prior_social_security_wages(salary_slip),
-			opening_taxable_wages=_decimal(salary_slip._salary_structure_assignment.get(OPENING_WAGES_FIELD)),
+			prior_taxable_wages=prior_taxable_wages(
+				get_all=cast(GetAll, frappe.get_all),
+				employee=salary_slip.employee,
+				current_slip=salary_slip.name,
+				posting_date=salary_slip.posting_date,
+				taxable_components=taxable_components,
+			),
+			opening_taxable_wages=Decimal("0.00"),
 		)
 		apply_federal_income_tax_withholding(
 			salary_slip,
@@ -75,25 +73,6 @@ def _taxable_social_security_components() -> set[str]:
 		pluck="name",
 	)
 	return set(cast(list[str], values))
-
-
-def _prior_social_security_wages(salary_slip: FrappeSalarySlip) -> Decimal:
-	posting_date = _date(salary_slip.posting_date)
-	values = frappe.get_all(
-		"Salary Slip",
-		filters={
-			"employee": salary_slip.employee,
-			"docstatus": 1,
-			"name": ("!=", salary_slip.name),
-			"posting_date": ("between", (posting_date.replace(month=1, day=1), posting_date)),
-		},
-		pluck=SLIP_WAGES_FIELD,
-	)
-	return sum((_decimal(value) for value in values), Decimal("0"))
-
-
-def _date(value: date | str) -> date:
-	return value if isinstance(value, date) else date.fromisoformat(value)
 
 
 def _decimal(value: str | int | float | None) -> Decimal:
