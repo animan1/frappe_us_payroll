@@ -1,10 +1,10 @@
 import unittest
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 
-from frappe_us_payroll.payroll.components import DeductionRow, EarningRow
+from frappe_us_payroll.payroll.components import EarningRow, SalaryComponentRow
 from frappe_us_payroll.payroll.social_security import (
 	SOCIAL_SECURITY_COMPONENT,
 	apply_social_security_withholding,
@@ -32,8 +32,9 @@ class FakeSalarySlip:
 	def __init__(self, earnings: list[FakeEarning]) -> None:
 		self.earnings: Iterable[EarningRow] = earnings
 		self.deductions = [FakeDeduction(SOCIAL_SECURITY_COMPONENT)]
+		self._evaluated_components: Mapping[str, Iterable[SalaryComponentRow]] = {}
 
-	def get(self, fieldname: str) -> Iterable[DeductionRow] | None:
+	def get(self, fieldname: str) -> Iterable[SalaryComponentRow] | None:
 		return self.deductions if fieldname == "deductions" else None
 
 
