@@ -13,6 +13,8 @@ from frappe_us_payroll.payroll.social_security import (
 TAXABLE_EARNING_FIELDS = (
 	"us_social_security_taxable",
 	"us_federal_income_taxable",
+	"us_medicare_taxable",
+	"us_futa_taxable",
 )
 SALARY_COMPONENTS = {
 	SOCIAL_SECURITY_COMPONENT: {
