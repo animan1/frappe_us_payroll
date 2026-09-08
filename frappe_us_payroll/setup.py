@@ -6,7 +6,12 @@ from hrms.setup import delete_custom_fields
 from frappe_us_payroll.custom_fields import get_custom_fields
 from frappe_us_payroll.payroll.income_tax import FEDERAL_INCOME_TAX_COMPONENT
 
-SOCIAL_SECURITY_TAXABLE_CUSTOM_FIELD = "Salary Component-us_social_security_taxable"
+TAXABLE_EARNING_FIELDS = (
+	"us_social_security_taxable",
+	"us_federal_income_taxable",
+	"us_medicare_taxable",
+	"us_futa_taxable",
+)
 SOCIAL_SECURITY_COMPONENT = "US Social Security"
 SALARY_COMPONENTS = {
 	SOCIAL_SECURITY_COMPONENT: {
@@ -22,10 +27,14 @@ SALARY_COMPONENTS = {
 
 def install_custom_fields() -> None:
 	"""Create or update the app-owned payroll fields and components."""
-	initialize_existing_earnings = not frappe.db.exists("Custom Field", SOCIAL_SECURITY_TAXABLE_CUSTOM_FIELD)
+	new_taxability_fields = [
+		fieldname
+		for fieldname in TAXABLE_EARNING_FIELDS
+		if not frappe.db.exists("Custom Field", f"Salary Component-{fieldname}")
+	]
 	create_custom_fields(get_custom_fields(), update=True)
-	if initialize_existing_earnings:
-		enable_social_security_for_existing_earnings()
+	for fieldname in new_taxability_fields:
+		enable_taxability_for_existing_earnings(fieldname)
 	install_salary_components()
 
 
@@ -46,15 +55,20 @@ def install_salary_components() -> None:
 		).insert(ignore_permissions=True)
 
 
-def enable_social_security_for_existing_earnings() -> None:
-	"""Apply the default-on policy once to earning components that predate the field."""
+def enable_taxability_for_existing_earnings(fieldname: str) -> None:
+	"""Apply a new taxable-by-default field to earning components that predate it."""
 	frappe.db.set_value(
 		"Salary Component",
 		{"type": "Earning"},
-		"us_social_security_taxable",
+		fieldname,
 		1,
 		update_modified=False,
 	)
+
+
+def enable_social_security_for_existing_earnings() -> None:
+	"""Retain the original patch entry point for installed sites."""
+	enable_taxability_for_existing_earnings("us_social_security_taxable")
 
 
 def uninstall_custom_fields() -> None:

@@ -19,12 +19,21 @@ class CustomFieldsTest(unittest.TestCase):
 					"us_w4_deductions",
 					"us_w4_extra_withholding",
 				],
-				"Salary Component": ["us_social_security_taxable"],
+				"Salary Component": [
+					"us_social_security_taxable",
+					"us_federal_income_taxable",
+					"us_medicare_taxable",
+					"us_futa_taxable",
+				],
 				"Salary Structure Assignment": [
 					"us_payroll_opening_balances_section",
 					"us_social_security_taxable_wages_till_date",
 				],
-				"Salary Slip": ["us_social_security_taxable_wages"],
+				"Salary Slip": [
+					"us_social_security_taxable_wages",
+					"us_medicare_taxable_wages",
+					"us_futa_taxable_wages",
+				],
 			},
 		)
 
@@ -37,19 +46,24 @@ class CustomFieldsTest(unittest.TestCase):
 		self.assertEqual(assignment_field["non_negative"], 1)
 
 	def test_social_security_taxability_defaults_on(self) -> None:
-		component_field = get_custom_fields()["Salary Component"][0]
+		component_fields = get_custom_fields()["Salary Component"]
+		component_field = component_fields[0]
 		description = component_field["description"]
 
 		self.assertEqual(component_field["default"], "1")
 		if not isinstance(description, str):
 			raise AssertionError("Salary Component field description must be text")
 		self.assertIn("Uncheck", description)
+		self.assertTrue(all(field["default"] == "1" for field in component_fields))
 
 	def test_salary_slip_wages_are_persisted_output(self) -> None:
-		salary_slip_field = get_custom_fields()["Salary Slip"][0]
+		salary_slip_fields = get_custom_fields()["Salary Slip"]
+		salary_slip_field = salary_slip_fields[0]
 
 		self.assertEqual(salary_slip_field["read_only"], 1)
 		self.assertEqual(salary_slip_field["no_copy"], 1)
+		self.assertTrue(all(field["read_only"] == 1 for field in salary_slip_fields))
+		self.assertTrue(all(field["no_copy"] == 1 for field in salary_slip_fields))
 
 
 if __name__ == "__main__":
