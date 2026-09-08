@@ -10,6 +10,15 @@ class CustomFieldsTest(unittest.TestCase):
 		self.assertEqual(
 			{doctype: [field["fieldname"] for field in fields] for doctype, fields in custom_fields.items()},
 			{
+				"Employee": [
+					"us_w4_section",
+					"us_w4_filing_status",
+					"us_w4_step_2",
+					"us_w4_dependents_amount",
+					"us_w4_other_income",
+					"us_w4_deductions",
+					"us_w4_extra_withholding",
+				],
 				"Salary Component": ["us_social_security_taxable"],
 				"Salary Structure Assignment": [
 					"us_payroll_opening_balances_section",
