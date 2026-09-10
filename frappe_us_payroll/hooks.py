@@ -18,6 +18,8 @@ doc_events = {
 	},
 }
 
+doctype_js = {"Salary Slip": "public/js/salary_slip.js"}
+
 regional_overrides = {
 	"United States": {
 		"hrms.payroll.doctype.salary_slip.salary_slip.apply_regional_deductions": (
