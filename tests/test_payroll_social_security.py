@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from frappe_us_payroll.payroll.components import EarningRow, SalaryComponentRow
 from frappe_us_payroll.payroll.social_security import (
-	SOCIAL_SECURITY_COMPONENT,
+	SOCIAL_SECURITY_EMPLOYEE_COMPONENT,
 	apply_social_security_withholding,
 	taxable_wages,
 )
@@ -31,7 +31,7 @@ class FakeSalarySlip:
 
 	def __init__(self, earnings: list[FakeEarning]) -> None:
 		self.earnings: Iterable[EarningRow] = earnings
-		self.deductions = [FakeDeduction(SOCIAL_SECURITY_COMPONENT)]
+		self.deductions = [FakeDeduction(SOCIAL_SECURITY_EMPLOYEE_COMPONENT)]
 		self._evaluated_components: Mapping[str, Iterable[SalaryComponentRow]] = {}
 
 	def get(self, fieldname: str) -> Iterable[SalaryComponentRow] | None:
