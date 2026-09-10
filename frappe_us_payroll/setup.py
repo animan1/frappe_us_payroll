@@ -11,6 +11,12 @@ from frappe_us_payroll.payroll.component_names import (
 	MEDICARE_EMPLOYER,
 	SOCIAL_SECURITY_EMPLOYEE,
 	SOCIAL_SECURITY_EMPLOYER,
+	WA_CARES_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYER,
+	WA_PAID_LEAVE_EMPLOYEE,
+	WA_PAID_LEAVE_EMPLOYER,
+	WA_UNEMPLOYMENT_EMPLOYER,
 )
 
 TAXABLE_EARNING_FIELDS = (
@@ -18,6 +24,8 @@ TAXABLE_EARNING_FIELDS = (
 	"us_federal_income_taxable",
 	"us_medicare_taxable",
 	"us_futa_taxable",
+	"wa_paid_leave_taxable",
+	"wa_unemployment_taxable",
 )
 SALARY_COMPONENTS = {
 	SOCIAL_SECURITY_EMPLOYEE: {
@@ -49,6 +57,36 @@ SALARY_COMPONENTS = {
 		"type": "Employer Contribution",
 		"salary_component_abbr": "FUTA",
 		"description": "Federal unemployment liability calculated by Frappe US Payroll",
+	},
+	WA_PAID_LEAVE_EMPLOYEE: {
+		"type": "Deduction",
+		"salary_component_abbr": "WA_PFML_D",
+		"description": "Employee WA Paid Leave premium calculated by Frappe US Payroll",
+	},
+	WA_CARES_EMPLOYEE: {
+		"type": "Deduction",
+		"salary_component_abbr": "WA_Cares",
+		"description": "Employee WA Cares premium calculated by Frappe US Payroll",
+	},
+	WA_INDUSTRIAL_INSURANCE_EMPLOYEE: {
+		"type": "Deduction",
+		"salary_component_abbr": "WA_LI_D",
+		"description": "Employee WA L&I premium calculated by Frappe US Payroll",
+	},
+	WA_PAID_LEAVE_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "WA_PFML_C",
+		"description": "Employer WA Paid Leave liability calculated by Frappe US Payroll",
+	},
+	WA_INDUSTRIAL_INSURANCE_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "WA_LI_C",
+		"description": "Employer WA L&I liability calculated by Frappe US Payroll",
+	},
+	WA_UNEMPLOYMENT_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "WA_UI",
+		"description": "Employer WA unemployment liability calculated by Frappe US Payroll",
 	},
 }
 

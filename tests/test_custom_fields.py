@@ -4,7 +4,7 @@ from frappe_us_payroll.custom_fields import get_custom_fields
 
 
 class CustomFieldsTest(unittest.TestCase):
-	def test_defines_social_security_fields_on_each_source_document(self) -> None:
+	def test_defines_payroll_fields_on_each_source_document(self) -> None:
 		custom_fields = get_custom_fields()
 
 		self.assertEqual(
@@ -18,27 +18,42 @@ class CustomFieldsTest(unittest.TestCase):
 					"us_w4_other_income",
 					"us_w4_deductions",
 					"us_w4_extra_withholding",
+					"wa_payroll_section",
+					"wa_paid_leave_exempt",
+					"wa_cares_exempt",
 				],
 				"Salary Component": [
 					"us_social_security_taxable",
 					"us_federal_income_taxable",
 					"us_medicare_taxable",
 					"us_futa_taxable",
+					"wa_paid_leave_taxable",
+					"wa_unemployment_taxable",
 				],
 				"Salary Structure Assignment": [
 					"us_payroll_opening_balances_section",
 					"us_social_security_taxable_wages_till_date",
+					"wa_payroll_configuration_section",
+					"wa_payroll_enabled",
+					"wa_pfml_employer_share_required",
+					"wa_unemployment_rate",
+					"wa_li_employee_rate_per_hour",
+					"wa_li_employer_rate_per_hour",
 				],
 				"Salary Slip": [
 					"us_social_security_taxable_wages",
 					"us_medicare_taxable_wages",
 					"us_futa_taxable_wages",
+					"wa_paid_leave_taxable_wages",
+					"wa_unemployment_taxable_wages",
 				],
 			},
 		)
 
 	def test_opening_wages_remain_editable_after_assignment_submission(self) -> None:
-		section_field, assignment_field = get_custom_fields()["Salary Structure Assignment"]
+		fields = {field["fieldname"]: field for field in get_custom_fields()["Salary Structure Assignment"]}
+		section_field = fields["us_payroll_opening_balances_section"]
+		assignment_field = fields["us_social_security_taxable_wages_till_date"]
 
 		self.assertEqual(section_field["fieldtype"], "Section Break")
 		self.assertEqual(assignment_field["insert_after"], section_field["fieldname"])
