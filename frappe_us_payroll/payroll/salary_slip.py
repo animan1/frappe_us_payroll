@@ -1,6 +1,7 @@
+from collections.abc import Iterable
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 import frappe
 
@@ -36,6 +37,26 @@ class FrappeSalarySlip(
 	posting_date: date | datetime | str
 	total_working_hours: float
 	_salary_structure_assignment: SalaryStructureAssignment
+
+
+class SerializableRow(Protocol):
+	def as_dict(self) -> dict[str, object]: ...
+
+
+class RecalculableSalarySlip(FrappeSalarySlip, Protocol):
+	deductions: Iterable[SerializableRow]
+	employer_contributions: Iterable[SerializableRow]
+	total_deduction: float
+	base_total_deduction: float
+	net_pay: float
+	base_net_pay: float
+	rounded_total: float
+	base_rounded_total: float
+
+	def check_permission(self, permission_type: str) -> None: ...
+	def set_salary_structure_assignment(self) -> None: ...
+	def set_precision_for_component_amounts(self) -> None: ...
+	def set_net_pay(self) -> None: ...
 
 
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
@@ -146,3 +167,30 @@ def _posting_date(value: date | datetime | str) -> date:
 
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
+
+
+@frappe.whitelist()
+def recalculate(salary_slip: str | dict[str, Any]) -> dict[str, object]:
+	"""Recalculate regional rows and totals for an unsaved Salary Slip from the UI."""
+	values = frappe.parse_json(salary_slip) if isinstance(salary_slip, str) else salary_slip
+	doc = cast(RecalculableSalarySlip, frappe.get_doc(cast(Any, values)))
+	doc.check_permission("write")
+	doc.set_salary_structure_assignment()
+	apply_us_payroll_deductions(doc)
+	doc.set_precision_for_component_amounts()
+	doc.set_net_pay()
+	return {
+		"deductions": [row.as_dict() for row in doc.deductions],
+		"employer_contributions": [row.as_dict() for row in doc.employer_contributions],
+		"us_social_security_taxable_wages": doc.us_social_security_taxable_wages,
+		"us_medicare_taxable_wages": doc.us_medicare_taxable_wages,
+		"us_futa_taxable_wages": doc.us_futa_taxable_wages,
+		"wa_paid_leave_taxable_wages": doc.wa_paid_leave_taxable_wages,
+		"wa_unemployment_taxable_wages": doc.wa_unemployment_taxable_wages,
+		"total_deduction": doc.total_deduction,
+		"base_total_deduction": doc.base_total_deduction,
+		"net_pay": doc.net_pay,
+		"base_net_pay": doc.base_net_pay,
+		"rounded_total": doc.rounded_total,
+		"base_rounded_total": doc.base_rounded_total,
+	}

@@ -4,6 +4,7 @@ SHELL := /bin/bash
 APP := frappe_us_payroll
 SITE ?= hrms.localhost
 TEST_SITE ?= frappe-us-payroll.localhost
+DEMO_SITE ?= $(TEST_SITE)
 TEST_ADMIN_PASSWORD ?= Administrator
 DB_ROOT_PASSWORD ?= 123
 SLIP ?=
@@ -16,7 +17,7 @@ COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip ytd-preview ytd-import test-site enable-tests deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps build-assets migrate e2e-demo recalculate-slip ytd-preview ytd-import test-site enable-tests deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -75,6 +76,9 @@ register: link ## Register the bind-mounted app with the bench.
 bench-deps: link ## Sync the app and its Python dependencies into the Frappe bench.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe env/bin/pip install --editable apps/$(APP)
 
+build-assets: bench-deps ## Build the app's browser assets.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench build --app $(APP)
+
 install: register bench-deps ## Install the app package and app on the configured Frappe site (one time per site).
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) install-app $(APP)
 	@$(MAKE) restart
@@ -82,8 +86,8 @@ install: register bench-deps ## Install the app package and app on the configure
 migrate: link ## Migrate the configured site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) migrate
 
-e2e-demo: bench-deps ## Create a persistent $1,000 Salary Slip for manual UI review.
-	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.ensure_social_security_e2e_demo
+e2e-demo: test-site build-assets ## Create a persistent $1,000 Salary Slip on the isolated demo site.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(DEMO_SITE) execute frappe_us_payroll.development.ensure_social_security_e2e_demo
 
 recalculate-slip: bench-deps ## Recalculate a draft Salary Slip; pass SLIP="...".
 	@test -n "$(SLIP)" || (echo 'SLIP is required' >&2; exit 2)

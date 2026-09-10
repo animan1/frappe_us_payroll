@@ -32,6 +32,7 @@ def recalculate_salary_slip(salary_slip_name: str) -> str:
 
 def ensure_social_security_e2e_demo() -> str:
 	"""Create an idempotent, persistent Salary Slip for manual UI review."""
+	_ensure_company()
 	holiday_list = _ensure_holiday_list()
 	employee = _ensure_employee()
 	_ensure_holiday_assignment(employee, holiday_list)
@@ -60,6 +61,20 @@ def ensure_social_security_e2e_demo() -> str:
 		frappe.flags.country = previous_country
 
 
+def _ensure_company() -> None:
+	if frappe.db.exists("Company", DEMO_COMPANY):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Company",
+			"company_name": DEMO_COMPANY,
+			"abbr": "DEMO",
+			"default_currency": "USD",
+			"country": "United States",
+		}
+	).insert(ignore_permissions=True)
+
+
 def _ensure_holiday_list() -> str:
 	name = "US Payroll E2E 2026"
 	if not frappe.db.exists("Holiday List", name):
@@ -81,6 +96,12 @@ def _ensure_employee() -> str:
 		"name",
 	)
 	if isinstance(existing_employee, str):
+		frappe.db.set_value(
+			"Employee",
+			existing_employee,
+			"us_w4_filing_status",
+			"Single or Married filing separately",
+		)
 		return existing_employee
 
 	employee = frappe.get_doc(
@@ -92,6 +113,7 @@ def _ensure_employee() -> str:
 			"date_of_birth": "1990-01-01",
 			"date_of_joining": "2026-01-01",
 			"status": "Active",
+			"us_w4_filing_status": "Single or Married filing separately",
 		}
 	).insert(ignore_permissions=True)
 	return employee.name
@@ -217,6 +239,16 @@ def _ensure_salary_structure_assignment(employee: str) -> None:
 		"docstatus": 1,
 	}
 	if frappe.db.exists("Salary Structure Assignment", filters):
+		assignment_name = frappe.db.get_value("Salary Structure Assignment", filters, "name")
+		if not isinstance(assignment_name, str):
+			raise RuntimeError("Could not resolve the demo Salary Structure Assignment")
+		for fieldname, value in {
+			"wa_payroll_enabled": 1,
+			"wa_unemployment_rate": 1.2,
+			"wa_li_employee_rate_per_hour": 0.1755,
+			"wa_li_employer_rate_per_hour": 0.4046,
+		}.items():
+			frappe.db.set_value("Salary Structure Assignment", assignment_name, fieldname, value)
 		return
 
 	assignment = frappe.get_doc(
