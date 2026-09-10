@@ -20,6 +20,7 @@ upstream home.
 ## Initial tax scope
 
 - Federal income-tax withholding, Social Security, Medicare, Additional Medicare, and FUTA.
+- Washington Paid Leave, WA Cares, unemployment, and L&I/industrial insurance.
 
 ## Explicitly out of scope
 
