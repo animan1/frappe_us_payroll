@@ -16,12 +16,26 @@ from frappe_us_payroll.payroll.social_security import (
 	taxable_wages,
 )
 from frappe_us_payroll.payroll.ytd import GetAll, prior_taxable_wages
+from frappe_us_payroll.washington.salary_slip import (
+	WashingtonPayrollConfiguration,
+	WashingtonSalarySlip,
+	apply_washington_payroll,
+)
 
 
-class FrappeSalarySlip(SocialSecuritySalarySlip, MedicareSalarySlip, FutaSalarySlip, Protocol):
+class SalaryStructureAssignment(Protocol):
+	def get(self, fieldname: str) -> str | int | float | None: ...
+
+
+class FrappeSalarySlip(
+	SocialSecuritySalarySlip, MedicareSalarySlip, FutaSalarySlip, WashingtonSalarySlip, Protocol
+):
 	name: str
 	employee: str
 	payroll_frequency: str
+	posting_date: date | datetime | str
+	total_working_hours: float
+	_salary_structure_assignment: SalaryStructureAssignment
 
 
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
@@ -54,6 +68,8 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 			prior_taxable_wages=_prior_taxable_wages(salary_slip, futa_components),
 			tax_year=_posting_date(salary_slip.posting_date).year,
 		)
+		if bool(salary_slip._salary_structure_assignment.get("wa_payroll_enabled")):
+			_apply_washington_payroll(salary_slip)
 	except MissingSalaryComponentError as error:
 		frappe.throw(str(error), exc=frappe.ValidationError, title="US Payroll Configuration Required")
 
@@ -93,6 +109,30 @@ def _prior_taxable_wages(salary_slip: FrappeSalarySlip, components: set[str]) ->
 		current_slip=salary_slip.name,
 		posting_date=salary_slip.posting_date,
 		taxable_components=components,
+	)
+
+
+def _apply_washington_payroll(salary_slip: FrappeSalarySlip) -> None:
+	paid_leave_components = _taxable_components("wa_paid_leave_taxable")
+	unemployment_components = _taxable_components("wa_unemployment_taxable")
+	assignment = salary_slip._salary_structure_assignment
+	employee = frappe.get_doc("Employee", salary_slip.employee)
+	apply_washington_payroll(
+		salary_slip,
+		configuration=WashingtonPayrollConfiguration(
+			paid_leave_exempt=bool(employee.get("wa_paid_leave_exempt")),
+			cares_exempt=bool(employee.get("wa_cares_exempt")),
+			paid_leave_employer_share_required=bool(assignment.get("wa_pfml_employer_share_required")),
+			unemployment_rate=_decimal(assignment.get("wa_unemployment_rate")) / Decimal("100"),
+			industrial_insurance_employee_rate=_decimal(assignment.get("wa_li_employee_rate_per_hour")),
+			industrial_insurance_employer_rate=_decimal(assignment.get("wa_li_employer_rate_per_hour")),
+		),
+		tax_year=_posting_date(salary_slip.posting_date).year,
+		paid_leave_wages=taxable_wages(salary_slip.earnings, paid_leave_components),
+		prior_paid_leave_wages=_prior_taxable_wages(salary_slip, paid_leave_components),
+		unemployment_wages=taxable_wages(salary_slip.earnings, unemployment_components),
+		prior_unemployment_wages=_prior_taxable_wages(salary_slip, unemployment_components),
+		hours=_decimal(salary_slip.total_working_hours),
 	)
 
 

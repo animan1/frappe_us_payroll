@@ -9,6 +9,12 @@ from frappe_us_payroll.payroll.component_names import (
 	MEDICARE_EMPLOYER,
 	SOCIAL_SECURITY_EMPLOYEE,
 	SOCIAL_SECURITY_EMPLOYER,
+	WA_CARES_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYER,
+	WA_PAID_LEAVE_EMPLOYEE,
+	WA_PAID_LEAVE_EMPLOYER,
+	WA_UNEMPLOYMENT_EMPLOYER,
 )
 
 DEMO_COMPANY = "Demo Company"
@@ -151,6 +157,21 @@ def _ensure_salary_structure() -> None:
 					"amount": 0,
 					"depends_on_payment_days": 0,
 				},
+				{
+					"salary_component": WA_PAID_LEAVE_EMPLOYEE,
+					"abbr": "WA_PFML_D",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_CARES_EMPLOYEE,
+					"abbr": "WA_Cares",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_INDUSTRIAL_INSURANCE_EMPLOYEE,
+					"abbr": "WA_LI_D",
+					"amount": 0,
+				},
 			],
 			"employer_contributions": [
 				{
@@ -166,6 +187,21 @@ def _ensure_salary_structure() -> None:
 				{
 					"salary_component": FUTA_EMPLOYER,
 					"abbr": "FUTA",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_PAID_LEAVE_EMPLOYER,
+					"abbr": "WA_PFML_C",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_INDUSTRIAL_INSURANCE_EMPLOYER,
+					"abbr": "WA_LI_C",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_UNEMPLOYMENT_EMPLOYER,
+					"abbr": "WA_UI",
 					"amount": 0,
 				},
 			],
@@ -192,6 +228,10 @@ def _ensure_salary_structure_assignment(employee: str) -> None:
 			"currency": "USD",
 			"from_date": "2026-01-01",
 			"base": 1000,
+			"wa_payroll_enabled": 1,
+			"wa_unemployment_rate": 1.2,
+			"wa_li_employee_rate_per_hour": 0.1755,
+			"wa_li_employer_rate_per_hour": 0.4046,
 		}
 	).insert(ignore_permissions=True)
 	assignment.submit()

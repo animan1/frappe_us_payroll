@@ -10,6 +10,12 @@ from frappe_us_payroll.payroll.component_names import (
 	MEDICARE_EMPLOYER,
 	SOCIAL_SECURITY_EMPLOYEE,
 	SOCIAL_SECURITY_EMPLOYER,
+	WA_CARES_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYER,
+	WA_PAID_LEAVE_EMPLOYEE,
+	WA_PAID_LEAVE_EMPLOYER,
+	WA_UNEMPLOYMENT_EMPLOYER,
 )
 
 
@@ -71,6 +77,9 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 							"amount": 0,
 							"depends_on_payment_days": 0,
 						},
+						{"salary_component": WA_PAID_LEAVE_EMPLOYEE, "amount": 0},
+						{"salary_component": WA_CARES_EMPLOYEE, "amount": 0},
+						{"salary_component": WA_INDUSTRIAL_INSURANCE_EMPLOYEE, "amount": 0},
 					],
 					"employer_contributions": [
 						{
@@ -88,6 +97,9 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 							"abbr": "FUTA",
 							"amount": 0,
 						},
+						{"salary_component": WA_PAID_LEAVE_EMPLOYER, "amount": 0},
+						{"salary_component": WA_INDUSTRIAL_INSURANCE_EMPLOYER, "amount": 0},
+						{"salary_component": WA_UNEMPLOYMENT_EMPLOYER, "amount": 0},
 					],
 				}
 			).insert()
@@ -101,6 +113,10 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 					"currency": currency,
 					"from_date": "2026-01-01",
 					"base": 1000,
+					"wa_payroll_enabled": 1,
+					"wa_unemployment_rate": 1.2,
+					"wa_li_employee_rate_per_hour": 0.1755,
+					"wa_li_employer_rate_per_hour": 0.4046,
 				}
 			).insert()
 			assignment.submit()
@@ -116,12 +132,17 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 			deductions = {row.salary_component: row.amount for row in salary_slip.deductions}
 			self.assertEqual(deductions[SOCIAL_SECURITY_EMPLOYEE], 62)
 			self.assertEqual(deductions[MEDICARE_EMPLOYEE], 14.5)
+			self.assertEqual(deductions[WA_PAID_LEAVE_EMPLOYEE], 8.07)
+			self.assertEqual(deductions[WA_CARES_EMPLOYEE], 5.8)
 			contributions = {row.salary_component: row.amount for row in salary_slip.employer_contributions}
 			self.assertEqual(contributions[SOCIAL_SECURITY_EMPLOYER], 62)
 			self.assertEqual(contributions[MEDICARE_EMPLOYER], 14.5)
 			self.assertEqual(contributions[FUTA_EMPLOYER], 6)
-			self.assertEqual(salary_slip.total_deduction, 76.5)
-			self.assertEqual(salary_slip.net_pay, 923.5)
+			self.assertEqual(contributions[WA_PAID_LEAVE_EMPLOYER], 0)
+			self.assertEqual(contributions[WA_INDUSTRIAL_INSURANCE_EMPLOYER], 0)
+			self.assertEqual(contributions[WA_UNEMPLOYMENT_EMPLOYER], 12)
+			self.assertAlmostEqual(salary_slip.total_deduction, 90.37)
+			self.assertAlmostEqual(salary_slip.net_pay, 909.63)
 		finally:
 			frappe.flags.country = previous_country
 			frappe.db.set_single_value(
