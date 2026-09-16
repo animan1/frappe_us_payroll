@@ -2,9 +2,13 @@ import frappe
 
 from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_slip
 
-from frappe_us_payroll.payroll.social_security import (
-	SOCIAL_SECURITY_COMPONENT,
-	SOCIAL_SECURITY_COMPONENT_ABBR,
+from frappe_us_payroll.payroll.component_names import (
+	FEDERAL_INCOME_TAX,
+	FUTA_EMPLOYER,
+	MEDICARE_EMPLOYEE,
+	MEDICARE_EMPLOYER,
+	SOCIAL_SECURITY_EMPLOYEE,
+	SOCIAL_SECURITY_EMPLOYER,
 )
 
 DEMO_COMPANY = "Demo Company"
@@ -130,11 +134,40 @@ def _ensure_salary_structure() -> None:
 			],
 			"deductions": [
 				{
-					"salary_component": SOCIAL_SECURITY_COMPONENT,
-					"abbr": SOCIAL_SECURITY_COMPONENT_ABBR,
+					"salary_component": SOCIAL_SECURITY_EMPLOYEE,
+					"abbr": "FICA_D",
 					"amount": 0,
 					"depends_on_payment_days": 0,
-				}
+				},
+				{
+					"salary_component": FEDERAL_INCOME_TAX,
+					"abbr": "FIT",
+					"amount": 0,
+					"depends_on_payment_days": 0,
+				},
+				{
+					"salary_component": MEDICARE_EMPLOYEE,
+					"abbr": "Med_D",
+					"amount": 0,
+					"depends_on_payment_days": 0,
+				},
+			],
+			"employer_contributions": [
+				{
+					"salary_component": SOCIAL_SECURITY_EMPLOYER,
+					"abbr": "FICA_C",
+					"amount": 0,
+				},
+				{
+					"salary_component": MEDICARE_EMPLOYER,
+					"abbr": "Med_C",
+					"amount": 0,
+				},
+				{
+					"salary_component": FUTA_EMPLOYER,
+					"abbr": "FUTA",
+					"amount": 0,
+				},
 			],
 		}
 	).insert(ignore_permissions=True)
