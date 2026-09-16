@@ -75,7 +75,5 @@ def _taxable_components(fieldname: str) -> set[str]:
 		pluck="name",
 	)
 	return set(cast(list[str], values))
-
-
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
