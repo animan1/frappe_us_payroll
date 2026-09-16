@@ -75,6 +75,18 @@ def get_custom_fields() -> CustomFieldMap:
 				),
 				"default": "1",
 			},
+			{
+				"fieldname": "us_federal_income_taxable",
+				"label": "Subject to US Federal Income Tax Withholding",
+				"fieldtype": "Check",
+				"insert_after": "us_social_security_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": (
+					"Leave checked for wages. Uncheck only when this earning is excluded "
+					"from federal income tax withholding wages."
+				),
+				"default": "1",
+			},
 		],
 		"Salary Structure Assignment": [
 			{
