@@ -94,5 +94,7 @@ def _prior_taxable_wages(salary_slip: FrappeSalarySlip, components: set[str]) ->
 		posting_date=salary_slip.posting_date,
 		taxable_components=components,
 	)
+
+
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
