@@ -11,7 +11,7 @@ W4_FILING_STATUSES = {
 
 
 def get_custom_fields() -> CustomFieldMap:
-	"""Return the persisted inputs and outputs needed for Social Security wages."""
+	"""Return app-owned payroll inputs and calculated wage fields."""
 	return {
 		"Employee": [
 			{
@@ -61,6 +61,26 @@ def get_custom_fields() -> CustomFieldMap:
 				"default": "0",
 				"insert_after": "us_w4_deductions",
 			},
+			{
+				"fieldname": "wa_payroll_section",
+				"label": "Washington Payroll",
+				"fieldtype": "Section Break",
+				"insert_after": "us_w4_extra_withholding",
+			},
+			{
+				"fieldname": "wa_paid_leave_exempt",
+				"label": "Exempt from WA Paid Leave",
+				"fieldtype": "Check",
+				"default": "0",
+				"insert_after": "wa_payroll_section",
+			},
+			{
+				"fieldname": "wa_cares_exempt",
+				"label": "Exempt from WA Cares",
+				"fieldtype": "Check",
+				"default": "0",
+				"insert_after": "wa_paid_leave_exempt",
+			},
 		],
 		"Salary Component": [
 			{
@@ -77,14 +97,47 @@ def get_custom_fields() -> CustomFieldMap:
 			},
 			{
 				"fieldname": "us_federal_income_taxable",
-				"label": "Subject to US Federal Income Tax Withholding",
+				"label": "Subject to US Federal Income Tax",
 				"fieldtype": "Check",
 				"insert_after": "us_social_security_taxable",
 				"depends_on": 'eval:doc.type == "Earning"',
-				"description": (
-					"Leave checked for wages. Uncheck only when this earning is excluded "
-					"from federal income tax withholding wages."
-				),
+				"description": "Uncheck only when this earning is excluded from federal withholding wages.",
+				"default": "1",
+			},
+			{
+				"fieldname": "us_medicare_taxable",
+				"label": "Subject to US Medicare",
+				"fieldtype": "Check",
+				"insert_after": "us_federal_income_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": "Uncheck only when this earning is excluded from Medicare wages.",
+				"default": "1",
+			},
+			{
+				"fieldname": "us_futa_taxable",
+				"label": "Subject to FUTA",
+				"fieldtype": "Check",
+				"insert_after": "us_medicare_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": "Uncheck only when this earning is excluded from FUTA wages.",
+				"default": "1",
+			},
+			{
+				"fieldname": "wa_paid_leave_taxable",
+				"label": "Subject to WA Paid Leave and WA Cares",
+				"fieldtype": "Check",
+				"insert_after": "us_futa_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": "Uncheck for tips and other earnings excluded from Washington wages.",
+				"default": "1",
+			},
+			{
+				"fieldname": "wa_unemployment_taxable",
+				"label": "Subject to WA Unemployment",
+				"fieldtype": "Check",
+				"insert_after": "wa_paid_leave_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": "Uncheck only when this earning is excluded from WA unemployment wages.",
 				"default": "1",
 			},
 		],
@@ -105,6 +158,52 @@ def get_custom_fields() -> CustomFieldMap:
 				"non_negative": 1,
 				"allow_on_submit": 1,
 			},
+			{
+				"fieldname": "wa_payroll_configuration_section",
+				"label": "Washington Payroll",
+				"fieldtype": "Section Break",
+				"insert_after": "us_social_security_taxable_wages_till_date",
+			},
+			{
+				"fieldname": "wa_payroll_enabled",
+				"label": "Calculate Washington Payroll",
+				"fieldtype": "Check",
+				"default": "0",
+				"insert_after": "wa_payroll_configuration_section",
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "wa_pfml_employer_share_required",
+				"label": "Pay WA Paid Leave Employer Share",
+				"fieldtype": "Check",
+				"default": "0",
+				"insert_after": "wa_payroll_enabled",
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "wa_unemployment_rate",
+				"label": "WA Unemployment Rate",
+				"fieldtype": "Percent",
+				"insert_after": "wa_pfml_employer_share_required",
+				"description": "Employer-specific rate from the Employment Security Department.",
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "wa_li_employee_rate_per_hour",
+				"label": "WA L&I Employee Rate per Hour",
+				"fieldtype": "Float",
+				"precision": "6",
+				"insert_after": "wa_unemployment_rate",
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "wa_li_employer_rate_per_hour",
+				"label": "WA L&I Employer Rate per Hour",
+				"fieldtype": "Float",
+				"precision": "6",
+				"insert_after": "wa_li_employee_rate_per_hour",
+				"allow_on_submit": 1,
+			},
 		],
 		"Salary Slip": [
 			{
@@ -113,6 +212,45 @@ def get_custom_fields() -> CustomFieldMap:
 				"fieldtype": "Currency",
 				"insert_after": "gross_pay",
 				"description": "Wages from this slip subject to US Social Security",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
+			{
+				"fieldname": "us_medicare_taxable_wages",
+				"label": "US Medicare Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "us_social_security_taxable_wages",
+				"description": "Wages from this slip subject to Medicare",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
+			{
+				"fieldname": "us_futa_taxable_wages",
+				"label": "US FUTA Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "us_medicare_taxable_wages",
+				"description": "Wages from this slip subject to FUTA before its annual wage limit",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+				"print_hide": 1,
+			},
+			{
+				"fieldname": "wa_paid_leave_taxable_wages",
+				"label": "WA Paid Leave Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "us_futa_taxable_wages",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
+			{
+				"fieldname": "wa_unemployment_taxable_wages",
+				"label": "WA Unemployment Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "wa_paid_leave_taxable_wages",
 				"options": "currency",
 				"read_only": 1,
 				"no_copy": 1,

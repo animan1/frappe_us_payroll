@@ -10,6 +10,9 @@ required_apps = ["frappe/erpnext", "frappe/hrms"]
 after_install = "frappe_us_payroll.setup.install_custom_fields"
 after_migrate = "frappe_us_payroll.setup.install_custom_fields"
 before_uninstall = "frappe_us_payroll.setup.uninstall_custom_fields"
+before_tests = "hrms.tests.test_utils.before_tests"
+
+doctype_js = {"Salary Slip": "public/js/salary_slip.js"}
 
 regional_overrides = {
 	"United States": {

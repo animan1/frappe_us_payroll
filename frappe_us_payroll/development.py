@@ -2,9 +2,19 @@ import frappe
 
 from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_slip
 
-from frappe_us_payroll.payroll.social_security import (
-	SOCIAL_SECURITY_COMPONENT,
-	SOCIAL_SECURITY_COMPONENT_ABBR,
+from frappe_us_payroll.payroll.component_names import (
+	FEDERAL_INCOME_TAX,
+	FUTA_EMPLOYER,
+	MEDICARE_EMPLOYEE,
+	MEDICARE_EMPLOYER,
+	SOCIAL_SECURITY_EMPLOYEE,
+	SOCIAL_SECURITY_EMPLOYER,
+	WA_CARES_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYER,
+	WA_PAID_LEAVE_EMPLOYEE,
+	WA_PAID_LEAVE_EMPLOYER,
+	WA_UNEMPLOYMENT_EMPLOYER,
 )
 
 DEMO_COMPANY = "Demo Company"
@@ -22,6 +32,7 @@ def recalculate_salary_slip(salary_slip_name: str) -> str:
 
 def ensure_social_security_e2e_demo() -> str:
 	"""Create an idempotent, persistent Salary Slip for manual UI review."""
+	_ensure_company()
 	holiday_list = _ensure_holiday_list()
 	employee = _ensure_employee()
 	_ensure_holiday_assignment(employee, holiday_list)
@@ -50,6 +61,20 @@ def ensure_social_security_e2e_demo() -> str:
 		frappe.flags.country = previous_country
 
 
+def _ensure_company() -> None:
+	if frappe.db.exists("Company", DEMO_COMPANY):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Company",
+			"company_name": DEMO_COMPANY,
+			"abbr": "DEMO",
+			"default_currency": "USD",
+			"country": "United States",
+		}
+	).insert(ignore_permissions=True)
+
+
 def _ensure_holiday_list() -> str:
 	name = "US Payroll E2E 2026"
 	if not frappe.db.exists("Holiday List", name):
@@ -71,6 +96,12 @@ def _ensure_employee() -> str:
 		"name",
 	)
 	if isinstance(existing_employee, str):
+		frappe.db.set_value(
+			"Employee",
+			existing_employee,
+			"us_w4_filing_status",
+			"Single or Married filing separately",
+		)
 		return existing_employee
 
 	employee = frappe.get_doc(
@@ -82,6 +113,7 @@ def _ensure_employee() -> str:
 			"date_of_birth": "1990-01-01",
 			"date_of_joining": "2026-01-01",
 			"status": "Active",
+			"us_w4_filing_status": "Single or Married filing separately",
 		}
 	).insert(ignore_permissions=True)
 	return employee.name
@@ -130,11 +162,70 @@ def _ensure_salary_structure() -> None:
 			],
 			"deductions": [
 				{
-					"salary_component": SOCIAL_SECURITY_COMPONENT,
-					"abbr": SOCIAL_SECURITY_COMPONENT_ABBR,
+					"salary_component": SOCIAL_SECURITY_EMPLOYEE,
+					"abbr": "FICA_D",
 					"amount": 0,
 					"depends_on_payment_days": 0,
-				}
+				},
+				{
+					"salary_component": FEDERAL_INCOME_TAX,
+					"abbr": "FIT",
+					"amount": 0,
+					"depends_on_payment_days": 0,
+				},
+				{
+					"salary_component": MEDICARE_EMPLOYEE,
+					"abbr": "Med_D",
+					"amount": 0,
+					"depends_on_payment_days": 0,
+				},
+				{
+					"salary_component": WA_PAID_LEAVE_EMPLOYEE,
+					"abbr": "WA_PFML_D",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_CARES_EMPLOYEE,
+					"abbr": "WA_Cares",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_INDUSTRIAL_INSURANCE_EMPLOYEE,
+					"abbr": "WA_LI_D",
+					"amount": 0,
+				},
+			],
+			"employer_contributions": [
+				{
+					"salary_component": SOCIAL_SECURITY_EMPLOYER,
+					"abbr": "FICA_C",
+					"amount": 0,
+				},
+				{
+					"salary_component": MEDICARE_EMPLOYER,
+					"abbr": "Med_C",
+					"amount": 0,
+				},
+				{
+					"salary_component": FUTA_EMPLOYER,
+					"abbr": "FUTA",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_PAID_LEAVE_EMPLOYER,
+					"abbr": "WA_PFML_C",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_INDUSTRIAL_INSURANCE_EMPLOYER,
+					"abbr": "WA_LI_C",
+					"amount": 0,
+				},
+				{
+					"salary_component": WA_UNEMPLOYMENT_EMPLOYER,
+					"abbr": "WA_UI",
+					"amount": 0,
+				},
 			],
 		}
 	).insert(ignore_permissions=True)
@@ -148,6 +239,16 @@ def _ensure_salary_structure_assignment(employee: str) -> None:
 		"docstatus": 1,
 	}
 	if frappe.db.exists("Salary Structure Assignment", filters):
+		assignment_name = frappe.db.get_value("Salary Structure Assignment", filters, "name")
+		if not isinstance(assignment_name, str):
+			raise RuntimeError("Could not resolve the demo Salary Structure Assignment")
+		for fieldname, value in {
+			"wa_payroll_enabled": 1,
+			"wa_unemployment_rate": 1.2,
+			"wa_li_employee_rate_per_hour": 0.1755,
+			"wa_li_employer_rate_per_hour": 0.4046,
+		}.items():
+			frappe.db.set_value("Salary Structure Assignment", assignment_name, fieldname, value)
 		return
 
 	assignment = frappe.get_doc(
@@ -159,6 +260,10 @@ def _ensure_salary_structure_assignment(employee: str) -> None:
 			"currency": "USD",
 			"from_date": "2026-01-01",
 			"base": 1000,
+			"wa_payroll_enabled": 1,
+			"wa_unemployment_rate": 1.2,
+			"wa_li_employee_rate_per_hour": 0.1755,
+			"wa_li_employer_rate_per_hour": 0.4046,
 		}
 	).insert(ignore_permissions=True)
 	assignment.submit()
