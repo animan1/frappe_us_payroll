@@ -136,5 +136,6 @@ def _apply_washington_payroll(salary_slip: FrappeSalarySlip) -> None:
 		hours=_decimal(salary_slip.total_working_hours),
 	)
 
+
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
