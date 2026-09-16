@@ -1,12 +1,14 @@
 import unittest
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
 from frappe_us_payroll.payroll.components import (
-	DeductionRow,
+	DEDUCTIONS,
+	EMPLOYER_CONTRIBUTIONS,
 	MissingSalaryComponentError,
-	set_deduction_amount,
+	SalaryComponentRow,
+	set_component_amount,
 )
 
 TEST_AMOUNT = Decimal("12.34")
@@ -18,13 +20,20 @@ class FakeDeduction:
 	salary_component: str
 	amount: float
 	default_amount: float
+	amount_based_on_formula: int = 0
+	formula: str | None = None
 
 
 class FakeSalarySlip:
-	def __init__(self, deductions: list[FakeDeduction]) -> None:
+	def __init__(
+		self,
+		deductions: list[FakeDeduction],
+		evaluated_components: dict[str, list[FakeDeduction]] | None = None,
+	) -> None:
 		self.deductions = deductions
+		self._evaluated_components: Mapping[str, Iterable[SalaryComponentRow]] = evaluated_components or {}
 
-	def get(self, fieldname: str) -> Iterable[DeductionRow] | None:
+	def get(self, fieldname: str) -> Iterable[SalaryComponentRow] | None:
 		return self.deductions if fieldname == "deductions" else None
 
 
@@ -36,7 +45,7 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 			default_amount=0,
 		)
 
-		set_deduction_amount(FakeSalarySlip([deduction]), TEST_COMPONENT, TEST_AMOUNT)
+		set_component_amount(FakeSalarySlip([deduction]), DEDUCTIONS, TEST_COMPONENT, TEST_AMOUNT)
 
 		self.assertEqual(deduction.amount, 12.34)
 		self.assertEqual(deduction.default_amount, 12.34)
@@ -50,11 +59,27 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 		salary_slip = FakeSalarySlip([deduction])
 
 		with self.assertRaisesRegex(MissingSalaryComponentError, TEST_COMPONENT):
-			set_deduction_amount(salary_slip, TEST_COMPONENT, TEST_AMOUNT)
+			set_component_amount(salary_slip, DEDUCTIONS, TEST_COMPONENT, TEST_AMOUNT)
 
 		self.assertEqual(deduction.amount, 7.89)
 		self.assertEqual(deduction.default_amount, 7.89)
 		self.assertEqual(len(salary_slip.deductions), 1)
+
+	def test_sets_component_awaiting_hrms_evaluation(self) -> None:
+		contribution = FakeDeduction(TEST_COMPONENT, 0, 0, 1, "base * 0.10")
+		salary_slip = FakeSalarySlip([], {EMPLOYER_CONTRIBUTIONS: [contribution]})
+
+		set_component_amount(
+			salary_slip,
+			EMPLOYER_CONTRIBUTIONS,
+			TEST_COMPONENT,
+			TEST_AMOUNT,
+		)
+
+		self.assertEqual(contribution.amount, 12.34)
+		self.assertEqual(contribution.default_amount, 12.34)
+		self.assertEqual(contribution.amount_based_on_formula, 0)
+		self.assertIsNone(contribution.formula)
 
 
 if __name__ == "__main__":

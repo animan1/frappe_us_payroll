@@ -5,17 +5,18 @@ from typing import Protocol
 
 from frappe_us_payroll.federal.social_security import calculate_social_security_withholding
 from frappe_us_payroll.payroll.components import (
+	DEDUCTIONS,
 	EarningRow,
-	SalarySlipDeductions,
+	SalarySlipComponents,
 	SalarySlipEarnings,
 	as_frappe_currency,
-	set_deduction_amount,
+	set_component_amount,
 )
 
 SOCIAL_SECURITY_COMPONENT = "US Social Security"
 
 
-class SocialSecuritySalarySlip(SalarySlipDeductions, SalarySlipEarnings, Protocol):
+class SocialSecuritySalarySlip(SalarySlipComponents, SalarySlipEarnings, Protocol):
 	posting_date: date | datetime | str
 	us_social_security_taxable_wages: float
 
@@ -44,7 +45,7 @@ def apply_social_security_withholding(
 	)
 
 	salary_slip.us_social_security_taxable_wages = as_frappe_currency(current_taxable_wages)
-	set_deduction_amount(salary_slip, SOCIAL_SECURITY_COMPONENT, withholding)
+	set_component_amount(salary_slip, DEDUCTIONS, SOCIAL_SECURITY_COMPONENT, withholding)
 	return withholding
 
 
