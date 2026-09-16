@@ -69,6 +69,7 @@ def install_custom_fields() -> None:
 def install_salary_components() -> None:
 	"""Create required app-owned Salary Components without changing existing configuration."""
 	for component_name, values in SALARY_COMPONENTS.items():
+		# Existing components may have live abbreviations, formulas, or account mappings.
 		if frappe.db.exists("Salary Component", component_name):
 			continue
 		frappe.get_doc(
