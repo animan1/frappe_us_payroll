@@ -7,10 +7,11 @@ from frappe_us_payroll.federal.income_tax import (
 	PayFrequency,
 	calculate_federal_income_tax_withholding,
 )
+from frappe_us_payroll.payroll.component_names import FEDERAL_INCOME_TAX
 from frappe_us_payroll.payroll.components import DEDUCTIONS, SalarySlipComponents, set_component_amount
 from frappe_us_payroll.payroll.dates import as_date
 
-FEDERAL_INCOME_TAX_COMPONENT = "US - Federal Income Tax"
+FEDERAL_INCOME_TAX_COMPONENT = FEDERAL_INCOME_TAX
 
 
 class FederalIncomeTaxSalarySlip(SalarySlipComponents, Protocol):
