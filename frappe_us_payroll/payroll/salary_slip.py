@@ -6,7 +6,7 @@ import frappe
 from frappe_us_payroll.custom_fields import W4_FILING_STATUSES
 from frappe_us_payroll.federal.income_tax import FilingStatus, FormW4
 from frappe_us_payroll.payroll.components import MissingSalaryComponentError
-from frappe_us_payroll.payroll.dates import posting_date
+from frappe_us_payroll.payroll.dates import as_date
 from frappe_us_payroll.payroll.futa import FutaSalarySlip, apply_futa_liability
 from frappe_us_payroll.payroll.income_tax import apply_federal_income_tax_withholding
 from frappe_us_payroll.payroll.medicare import MedicareSalarySlip, apply_medicare_liability
@@ -52,7 +52,7 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 			salary_slip,
 			taxable_wages=taxable_wages(salary_slip.earnings, futa_components),
 			prior_taxable_wages=_prior_taxable_wages(salary_slip, futa_components),
-			tax_year=posting_date(salary_slip.posting_date).year,
+			tax_year=as_date(salary_slip.posting_date).year,
 		)
 	except MissingSalaryComponentError as error:
 		frappe.throw(str(error), exc=frappe.ValidationError, title="US Payroll Configuration Required")
@@ -94,6 +94,5 @@ def _prior_taxable_wages(salary_slip: FrappeSalarySlip, components: set[str]) ->
 		posting_date=salary_slip.posting_date,
 		taxable_components=components,
 	)
-
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
