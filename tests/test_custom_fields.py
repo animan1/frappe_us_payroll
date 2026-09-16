@@ -10,7 +10,19 @@ class CustomFieldsTest(unittest.TestCase):
 		self.assertEqual(
 			{doctype: [field["fieldname"] for field in fields] for doctype, fields in custom_fields.items()},
 			{
-				"Salary Component": ["us_social_security_taxable"],
+				"Employee": [
+					"us_w4_section",
+					"us_w4_filing_status",
+					"us_w4_step_2",
+					"us_w4_dependents_amount",
+					"us_w4_other_income",
+					"us_w4_deductions",
+					"us_w4_extra_withholding",
+				],
+				"Salary Component": [
+					"us_social_security_taxable",
+					"us_federal_income_taxable",
+				],
 				"Salary Structure Assignment": [
 					"us_payroll_opening_balances_section",
 					"us_social_security_taxable_wages_till_date",
@@ -27,14 +39,14 @@ class CustomFieldsTest(unittest.TestCase):
 		self.assertEqual(assignment_field["allow_on_submit"], 1)
 		self.assertEqual(assignment_field["non_negative"], 1)
 
-	def test_social_security_taxability_defaults_on(self) -> None:
-		component_field = get_custom_fields()["Salary Component"][0]
-		description = component_field["description"]
+	def test_earning_taxability_defaults_on(self) -> None:
+		for component_field in get_custom_fields()["Salary Component"]:
+			description = component_field["description"]
 
-		self.assertEqual(component_field["default"], "1")
-		if not isinstance(description, str):
-			raise AssertionError("Salary Component field description must be text")
-		self.assertIn("Uncheck", description)
+			self.assertEqual(component_field["default"], "1")
+			if not isinstance(description, str):
+				raise AssertionError("Salary Component field description must be text")
+			self.assertIn("Uncheck", description)
 
 	def test_salary_slip_wages_are_persisted_output(self) -> None:
 		salary_slip_field = get_custom_fields()["Salary Slip"][0]
