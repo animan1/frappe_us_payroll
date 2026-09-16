@@ -8,6 +8,7 @@ import frappe
 from frappe_us_payroll.custom_fields import W4_FILING_STATUSES
 from frappe_us_payroll.federal.income_tax import FilingStatus, FormW4
 from frappe_us_payroll.payroll.components import MissingSalaryComponentError
+from frappe_us_payroll.payroll.dates import posting_date
 from frappe_us_payroll.payroll.futa import FutaSalarySlip, apply_futa_liability
 from frappe_us_payroll.payroll.income_tax import apply_federal_income_tax_withholding
 from frappe_us_payroll.payroll.medicare import MedicareSalarySlip, apply_medicare_liability
@@ -87,7 +88,7 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 			salary_slip,
 			taxable_wages=taxable_wages(salary_slip.earnings, futa_components),
 			prior_taxable_wages=_prior_taxable_wages(salary_slip, futa_components),
-			tax_year=_posting_date(salary_slip.posting_date).year,
+			tax_year=posting_date(salary_slip.posting_date).year,
 		)
 		if bool(salary_slip._salary_structure_assignment.get("wa_payroll_enabled")):
 			_apply_washington_payroll(salary_slip)
@@ -131,8 +132,6 @@ def _prior_taxable_wages(salary_slip: FrappeSalarySlip, components: set[str]) ->
 		posting_date=salary_slip.posting_date,
 		taxable_components=components,
 	)
-
-
 def _apply_washington_payroll(salary_slip: FrappeSalarySlip) -> None:
 	paid_leave_components = _taxable_components("wa_paid_leave_taxable")
 	unemployment_components = _taxable_components("wa_unemployment_taxable")
@@ -148,22 +147,13 @@ def _apply_washington_payroll(salary_slip: FrappeSalarySlip) -> None:
 			industrial_insurance_employee_rate=_decimal(assignment.get("wa_li_employee_rate_per_hour")),
 			industrial_insurance_employer_rate=_decimal(assignment.get("wa_li_employer_rate_per_hour")),
 		),
-		tax_year=_posting_date(salary_slip.posting_date).year,
+		tax_year=posting_date(salary_slip.posting_date).year,
 		paid_leave_wages=taxable_wages(salary_slip.earnings, paid_leave_components),
 		prior_paid_leave_wages=_prior_taxable_wages(salary_slip, paid_leave_components),
 		unemployment_wages=taxable_wages(salary_slip.earnings, unemployment_components),
 		prior_unemployment_wages=_prior_taxable_wages(salary_slip, unemployment_components),
 		hours=_decimal(salary_slip.total_working_hours),
 	)
-
-
-def _posting_date(value: date | datetime | str) -> date:
-	if isinstance(value, datetime):
-		return value.date()
-	if isinstance(value, date):
-		return value
-	return date.fromisoformat(value)
-
 
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
