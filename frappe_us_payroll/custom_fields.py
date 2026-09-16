@@ -11,7 +11,7 @@ W4_FILING_STATUSES = {
 
 
 def get_custom_fields() -> CustomFieldMap:
-	"""Return the persisted inputs and outputs needed for Social Security wages."""
+	"""Return app-owned payroll inputs and calculated wage fields."""
 	return {
 		"Employee": [
 			{
@@ -77,14 +77,29 @@ def get_custom_fields() -> CustomFieldMap:
 			},
 			{
 				"fieldname": "us_federal_income_taxable",
-				"label": "Subject to US Federal Income Tax Withholding",
+				"label": "Subject to US Federal Income Tax",
 				"fieldtype": "Check",
 				"insert_after": "us_social_security_taxable",
 				"depends_on": 'eval:doc.type == "Earning"',
-				"description": (
-					"Leave checked for wages. Uncheck only when this earning is excluded "
-					"from federal income tax withholding wages."
-				),
+				"description": "Uncheck only when this earning is excluded from federal withholding wages.",
+				"default": "1",
+			},
+			{
+				"fieldname": "us_medicare_taxable",
+				"label": "Subject to US Medicare",
+				"fieldtype": "Check",
+				"insert_after": "us_federal_income_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": "Uncheck only when this earning is excluded from Medicare wages.",
+				"default": "1",
+			},
+			{
+				"fieldname": "us_futa_taxable",
+				"label": "Subject to FUTA",
+				"fieldtype": "Check",
+				"insert_after": "us_medicare_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": "Uncheck only when this earning is excluded from FUTA wages.",
 				"default": "1",
 			},
 		],
@@ -116,6 +131,27 @@ def get_custom_fields() -> CustomFieldMap:
 				"options": "currency",
 				"read_only": 1,
 				"no_copy": 1,
+			},
+			{
+				"fieldname": "us_medicare_taxable_wages",
+				"label": "US Medicare Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "us_social_security_taxable_wages",
+				"description": "Wages from this slip subject to Medicare",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
+			{
+				"fieldname": "us_futa_taxable_wages",
+				"label": "US FUTA Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "us_medicare_taxable_wages",
+				"description": "Wages from this slip subject to FUTA before its annual wage limit",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+				"print_hide": 1,
 			},
 		],
 	}

@@ -1,0 +1,6 @@
+FEDERAL_INCOME_TAX = "US - Federal Income Tax"
+FUTA_EMPLOYER = "US - Federal Unemployment Insurance"
+MEDICARE_EMPLOYEE = "Medicare - Employee"
+MEDICARE_EMPLOYER = "Medicare - Employer"
+SOCIAL_SECURITY_EMPLOYEE = "US Social Security - Employee"
+SOCIAL_SECURITY_EMPLOYER = "US Social Security - Employer"
