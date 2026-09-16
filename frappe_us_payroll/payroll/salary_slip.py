@@ -24,23 +24,25 @@ class FrappeSalarySlip(SocialSecuritySalarySlip, Protocol):
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 	"""Apply supported US deductions through HRMS's regional extension point."""
 	try:
-		taxable_components = _taxable_social_security_components()
-		current_taxable_wages = taxable_wages(salary_slip.earnings, taxable_components)
+		social_security_components = _taxable_components("us_social_security_taxable")
 		apply_social_security_withholding(
 			salary_slip,
-			taxable_components=taxable_components,
+			taxable_components=social_security_components,
 			prior_taxable_wages=prior_taxable_wages(
 				get_all=cast(GetAll, frappe.get_all),
 				employee=salary_slip.employee,
 				current_slip=salary_slip.name,
 				posting_date=salary_slip.posting_date,
-				taxable_components=taxable_components,
+				taxable_components=social_security_components,
 			),
 			opening_taxable_wages=Decimal("0.00"),
 		)
 		apply_federal_income_tax_withholding(
 			salary_slip,
-			taxable_wages=current_taxable_wages,
+			taxable_wages=taxable_wages(
+				salary_slip.earnings,
+				_taxable_components("us_federal_income_taxable"),
+			),
 			form_w4=_employee_w4(salary_slip.employee),
 		)
 	except MissingSalaryComponentError as error:
@@ -66,14 +68,13 @@ def _employee_w4(employee_name: str) -> FormW4:
 	)
 
 
-def _taxable_social_security_components() -> set[str]:
+def _taxable_components(fieldname: str) -> set[str]:
 	values = frappe.get_all(
 		"Salary Component",
-		filters={"type": "Earning", "disabled": 0, "us_social_security_taxable": 1},
+		filters={"type": "Earning", "disabled": 0, fieldname: 1},
 		pluck="name",
 	)
 	return set(cast(list[str], values))
-
 
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
