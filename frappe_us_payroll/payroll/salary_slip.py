@@ -6,7 +6,7 @@ import frappe
 from frappe_us_payroll.custom_fields import W4_FILING_STATUSES
 from frappe_us_payroll.federal.income_tax import FilingStatus, FormW4
 from frappe_us_payroll.payroll.components import MissingSalaryComponentError
-from frappe_us_payroll.payroll.dates import posting_date
+from frappe_us_payroll.payroll.dates import as_date
 from frappe_us_payroll.payroll.income_tax import apply_federal_income_tax_withholding
 from frappe_us_payroll.payroll.social_security import (
 	SocialSecuritySalarySlip,
@@ -80,7 +80,7 @@ def _taxable_components(fieldname: str) -> set[str]:
 
 
 def _prior_social_security_wages(salary_slip: FrappeSalarySlip) -> Decimal:
-	slip_posting_date = posting_date(salary_slip.posting_date)
+	slip_posting_date = as_date(salary_slip.posting_date)
 	values = frappe.get_all(
 		"Salary Slip",
 		filters={
