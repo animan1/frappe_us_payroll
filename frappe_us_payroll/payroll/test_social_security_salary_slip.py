@@ -3,7 +3,10 @@ from frappe.tests import IntegrationTestCase
 
 from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_slip
 
-from frappe_us_payroll.payroll.social_security import SOCIAL_SECURITY_COMPONENT
+from frappe_us_payroll.payroll.social_security import (
+	SOCIAL_SECURITY_COMPONENT,
+	SOCIAL_SECURITY_COMPONENT_ABBR,
+)
 
 
 class TestSocialSecuritySalarySlip(IntegrationTestCase):
@@ -65,7 +68,7 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 					"deductions": [
 						{
 							"salary_component": SOCIAL_SECURITY_COMPONENT,
-							"abbr": "USSS",
+							"abbr": SOCIAL_SECURITY_COMPONENT_ABBR,
 							"amount": 0,
 							"depends_on_payment_days": 0,
 						}

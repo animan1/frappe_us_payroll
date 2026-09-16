@@ -5,6 +5,10 @@ from hrms.setup import delete_custom_fields
 
 from frappe_us_payroll.custom_fields import get_custom_fields
 from frappe_us_payroll.payroll.income_tax import FEDERAL_INCOME_TAX_COMPONENT
+from frappe_us_payroll.payroll.social_security import (
+	SOCIAL_SECURITY_COMPONENT,
+	SOCIAL_SECURITY_COMPONENT_ABBR,
+)
 
 TAXABLE_EARNING_FIELDS = (
 	"us_social_security_taxable",
@@ -12,10 +16,9 @@ TAXABLE_EARNING_FIELDS = (
 	"us_medicare_taxable",
 	"us_futa_taxable",
 )
-SOCIAL_SECURITY_COMPONENT = "US Social Security"
 SALARY_COMPONENTS = {
 	SOCIAL_SECURITY_COMPONENT: {
-		"salary_component_abbr": "USSS",
+		"salary_component_abbr": SOCIAL_SECURITY_COMPONENT_ABBR,
 		"description": "Employee Social Security tax withheld by Frappe US Payroll",
 	},
 	FEDERAL_INCOME_TAX_COMPONENT: {
