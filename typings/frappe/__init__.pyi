@@ -53,7 +53,10 @@ def get_all(
 	*,
 	filters: Mapping[
 		str,
-		JsonScalar | tuple[str, JsonScalar] | tuple[str, tuple[date, date]],
+		JsonScalar
+		| tuple[str, JsonScalar]
+		| tuple[str, tuple[date, date]]
+		| tuple[str, tuple[JsonScalar, ...]],
 	]
 	| None = ...,
 	pluck: str,

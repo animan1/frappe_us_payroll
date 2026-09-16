@@ -6,8 +6,8 @@ from decimal import Decimal
 
 from frappe_us_payroll.payroll.components import EarningRow, SalaryComponentRow
 from frappe_us_payroll.payroll.social_security import (
-	SOCIAL_SECURITY_COMPONENT,
-	SOCIAL_SECURITY_COMPONENT_ABBR,
+	SOCIAL_SECURITY_EMPLOYEE_COMPONENT,
+	SOCIAL_SECURITY_EMPLOYER_COMPONENT,
 	apply_social_security_withholding,
 	taxable_wages,
 )
@@ -32,18 +32,16 @@ class FakeSalarySlip:
 
 	def __init__(self, earnings: list[FakeEarning]) -> None:
 		self.earnings: Iterable[EarningRow] = earnings
-		self.deductions = [FakeDeduction(SOCIAL_SECURITY_COMPONENT)]
-		self._evaluated_components: Mapping[str, Iterable[SalaryComponentRow]] = {}
+		self.deductions = [FakeDeduction(SOCIAL_SECURITY_EMPLOYEE_COMPONENT)]
+		self._evaluated_components: Mapping[str, Iterable[SalaryComponentRow]] = {
+			"employer_contributions": [FakeDeduction(SOCIAL_SECURITY_EMPLOYER_COMPONENT)]
+		}
 
 	def get(self, fieldname: str) -> Iterable[SalaryComponentRow] | None:
 		return self.deductions if fieldname == "deductions" else None
 
 
 class SocialSecurityPayrollTest(unittest.TestCase):
-	def test_uses_the_live_salary_component_identity(self) -> None:
-		self.assertEqual(SOCIAL_SECURITY_COMPONENT, "US Social Security - Employee")
-		self.assertEqual(SOCIAL_SECURITY_COMPONENT_ABBR, "FICA_D")
-
 	def test_sums_only_subject_earnings(self) -> None:
 		earnings = [FakeEarning("Basic", 1000), FakeEarning("Expense Reimbursement", 50)]
 
@@ -62,6 +60,8 @@ class SocialSecurityPayrollTest(unittest.TestCase):
 		self.assertEqual(withholding, Decimal("62.00"))
 		self.assertEqual(slip.us_social_security_taxable_wages, 1000)
 		self.assertEqual(slip.deductions[0].amount, 62)
+		employer_contribution = next(iter(slip._evaluated_components["employer_contributions"]))
+		self.assertEqual(employer_contribution.amount, 62)
 
 	def test_opening_and_submitted_wages_apply_the_annual_wage_base(self) -> None:
 		slip = FakeSalarySlip([FakeEarning("Basic", 1000)])
