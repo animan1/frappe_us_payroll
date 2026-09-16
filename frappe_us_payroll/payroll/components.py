@@ -1,6 +1,6 @@
 from collections.abc import Iterable, Mapping
 from decimal import Decimal
-from typing import Any, Protocol, cast
+from typing import Protocol, cast
 
 DEDUCTIONS = "deductions"
 EMPLOYER_CONTRIBUTIONS = "employer_contributions"
@@ -15,6 +15,11 @@ class SalaryComponentRow(Protocol):
 	salary_component: str
 	amount: float
 	default_amount: float
+
+
+class FormulaSalaryComponentRow(SalaryComponentRow, Protocol):
+	amount_based_on_formula: int
+	formula: str | None
 
 
 class SalarySlipComponents(Protocol):
@@ -53,7 +58,7 @@ def set_component_amount(
 			component.default_amount = frappe_amount
 			# Evaluated structure rows must not reevaluate their original formula later.
 			if hasattr(component, "amount_based_on_formula"):
-				evaluated_component = cast(Any, component)
+				evaluated_component = cast(FormulaSalaryComponentRow, component)
 				evaluated_component.amount_based_on_formula = 0
 				evaluated_component.formula = None
 			return

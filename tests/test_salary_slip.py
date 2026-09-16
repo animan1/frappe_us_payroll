@@ -20,6 +20,8 @@ class FakeDeduction:
 	salary_component: str
 	amount: float
 	default_amount: float
+	amount_based_on_formula: int = 0
+	formula: str | None = None
 
 
 class FakeSalarySlip:
@@ -64,7 +66,7 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 		self.assertEqual(len(salary_slip.deductions), 1)
 
 	def test_sets_component_awaiting_hrms_evaluation(self) -> None:
-		contribution = FakeDeduction(TEST_COMPONENT, 0, 0)
+		contribution = FakeDeduction(TEST_COMPONENT, 0, 0, 1, "base * 0.10")
 		salary_slip = FakeSalarySlip([], {EMPLOYER_CONTRIBUTIONS: [contribution]})
 
 		set_component_amount(
@@ -76,6 +78,8 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 
 		self.assertEqual(contribution.amount, 12.34)
 		self.assertEqual(contribution.default_amount, 12.34)
+		self.assertEqual(contribution.amount_based_on_formula, 0)
+		self.assertIsNone(contribution.formula)
 
 
 if __name__ == "__main__":
