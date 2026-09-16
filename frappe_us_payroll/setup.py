@@ -13,6 +13,8 @@ from frappe_us_payroll.payroll.social_security import (
 TAXABLE_EARNING_FIELDS = (
 	"us_social_security_taxable",
 	"us_federal_income_taxable",
+	"us_medicare_taxable",
+	"us_futa_taxable",
 )
 SALARY_COMPONENTS = {
 	SOCIAL_SECURITY_COMPONENT: {
@@ -58,7 +60,7 @@ def install_salary_components() -> None:
 
 
 def enable_taxability_for_existing_earnings(fieldname: str) -> None:
-	"""Apply a new taxability field's default-on policy to existing earnings."""
+	"""Apply a new taxable-by-default field to earning components that predate it."""
 	frappe.db.set_value(
 		"Salary Component",
 		{"type": "Earning"},
