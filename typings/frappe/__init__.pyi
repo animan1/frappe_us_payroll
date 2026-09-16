@@ -1,6 +1,8 @@
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import date
-from typing import NoReturn, Protocol, TypeAlias, overload
+from typing import Any, NoReturn, Protocol, TypeAlias, TypeVar, overload
+
+Function = TypeVar("Function", bound=Callable[..., object])
 
 JsonScalar: TypeAlias = str | int | float | bool | None
 JsonValue: TypeAlias = JsonScalar | list[JsonValue] | dict[str, JsonValue]
@@ -21,7 +23,7 @@ class _Database(Protocol):
 	def set_value(
 		self,
 		doctype: str,
-		filters: Mapping[str, JsonScalar],
+		filters: str | Mapping[str, JsonScalar],
 		fieldname: str,
 		value: JsonScalar,
 		*,
@@ -53,9 +55,14 @@ def get_all(
 	*,
 	filters: Mapping[
 		str,
-		JsonScalar | tuple[str, JsonScalar] | tuple[str, tuple[date, date]],
+		JsonScalar
+		| tuple[str, JsonScalar]
+		| tuple[str, tuple[date, date]]
+		| tuple[str, tuple[JsonScalar, ...]],
 	]
 	| None = ...,
 	pluck: str,
 ) -> list[JsonScalar]: ...
 def throw(message: str, *, exc: type[Exception], title: str | None = ...) -> NoReturn: ...
+def parse_json(value: str) -> Any: ...
+def whitelist() -> Callable[[Function], Function]: ...
