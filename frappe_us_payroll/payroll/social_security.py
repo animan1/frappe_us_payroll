@@ -13,6 +13,7 @@ from frappe_us_payroll.payroll.components import (
 	as_frappe_currency,
 	set_component_amount,
 )
+from frappe_us_payroll.payroll.dates import posting_date
 
 SOCIAL_SECURITY_EMPLOYEE_COMPONENT = SOCIAL_SECURITY_EMPLOYEE
 
@@ -42,17 +43,9 @@ def apply_social_security_withholding(
 	withholding = calculate_social_security_withholding(
 		taxable_wages=current_taxable_wages,
 		prior_taxable_wages=prior_taxable_wages + opening_taxable_wages,
-		tax_year=_posting_date(salary_slip.posting_date).year,
+		tax_year=posting_date(salary_slip.posting_date).year,
 	)
 
 	salary_slip.us_social_security_taxable_wages = as_frappe_currency(current_taxable_wages)
 	set_component_amount(salary_slip, DEDUCTIONS, SOCIAL_SECURITY_EMPLOYEE_COMPONENT, withholding)
 	return withholding
-
-
-def _posting_date(value: date | datetime | str) -> date:
-	if isinstance(value, datetime):
-		return value.date()
-	if isinstance(value, date):
-		return value
-	return date.fromisoformat(value)
