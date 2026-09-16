@@ -12,9 +12,10 @@ from frappe_us_payroll.payroll.components import (
 	as_frappe_currency,
 	set_component_amount,
 )
-from frappe_us_payroll.payroll.dates import posting_date
+from frappe_us_payroll.payroll.dates import as_date
 
-SOCIAL_SECURITY_COMPONENT = "US Social Security"
+SOCIAL_SECURITY_COMPONENT = "US Social Security - Employee"
+SOCIAL_SECURITY_COMPONENT_ABBR = "FICA_D"
 
 
 class SocialSecuritySalarySlip(SalarySlipComponents, SalarySlipEarnings, Protocol):
@@ -42,7 +43,7 @@ def apply_social_security_withholding(
 	withholding = calculate_social_security_withholding(
 		taxable_wages=current_taxable_wages,
 		prior_taxable_wages=prior_taxable_wages + opening_taxable_wages,
-		tax_year=posting_date(salary_slip.posting_date).year,
+		tax_year=as_date(salary_slip.posting_date).year,
 	)
 
 	salary_slip.us_social_security_taxable_wages = as_frappe_currency(current_taxable_wages)
