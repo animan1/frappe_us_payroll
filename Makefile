@@ -3,14 +3,20 @@ SHELL := /bin/bash
 
 APP := frappe_us_payroll
 SITE ?= hrms.localhost
+TEST_SITE ?= frappe-us-payroll.localhost
+TEST_ADMIN_PASSWORD ?= Administrator
+DB_ROOT_PASSWORD ?= 123
 SLIP ?=
+TAX_YEAR ?=
+THROUGH_DATE ?=
+YTD_REPLACE ?=
 BENCH_DIR ?= /home/frappe/frappe-bench
 UV_CACHE_DIR ?= /tmp/frappe-us-payroll-uv-cache
 COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip enable-tests deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip ytd-preview ytd-import test-site enable-tests deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -83,6 +89,21 @@ recalculate-slip: bench-deps ## Recalculate a draft Salary Slip; pass SLIP="..."
 	@test -n "$(SLIP)" || (echo 'SLIP is required' >&2; exit 2)
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.recalculate_salary_slip --args '["$(SLIP)"]'
 
+ytd-preview: bench-deps ## Preview TimeTrex YTD opening slips from stdin; pass TAX_YEAR and THROUGH_DATE.
+	@test -n "$(TAX_YEAR)" || (echo 'TAX_YEAR is required' >&2; exit 2)
+	@test -n "$(THROUGH_DATE)" || (echo 'THROUGH_DATE is required' >&2; exit 2)
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe \
+		env/bin/python apps/$(APP)/scripts/import_timetrex_ytd.py \
+		--site $(SITE) --file - --tax-year $(TAX_YEAR) --through-date $(THROUGH_DATE)
+
+ytd-import: bench-deps ## Import TimeTrex YTD opening slips from stdin; set YTD_REPLACE=--replace to replace prior imports.
+	@test -n "$(TAX_YEAR)" || (echo 'TAX_YEAR is required' >&2; exit 2)
+	@test -n "$(THROUGH_DATE)" || (echo 'THROUGH_DATE is required' >&2; exit 2)
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe \
+		env/bin/python apps/$(APP)/scripts/import_timetrex_ytd.py \
+		--site $(SITE) --file - --tax-year $(TAX_YEAR) --through-date $(THROUGH_DATE) \
+		--apply $(YTD_REPLACE)
+
 deps-lock: ## Resolve application and development dependencies into uv.lock.
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv lock
 
@@ -92,11 +113,20 @@ deps: ## Install the locked application and development dependencies.
 unit: deps ## Run tests that do not require a Frappe site.
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --frozen python -m unittest discover -s tests -p 'test_*.py'
 
-enable-tests: ## Enable Frappe tests on the configured development site.
-	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) set-config allow_tests true
+test-site: register bench-deps ## Create or migrate the isolated Frappe test site.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bash -c '\
+		test -f sites/$(TEST_SITE)/site_config.json || \
+		bench new-site $(TEST_SITE) \
+			--admin-password $(TEST_ADMIN_PASSWORD) \
+			--db-root-password $(DB_ROOT_PASSWORD) \
+			--install-app erpnext --install-app hrms --install-app $(APP)'
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(TEST_SITE) migrate
 
-test: bench-deps enable-tests ## Run all app tests against the configured Frappe site.
-	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) run-tests --app $(APP)
+enable-tests: test-site ## Enable Frappe tests only on the isolated test site.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(TEST_SITE) set-config allow_tests true
+
+test: enable-tests ## Run all app tests against the isolated Frappe test site.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(TEST_SITE) run-tests --app $(APP)
 
 format: deps ## Format Python source with the locked Ruff version.
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv run --frozen ruff format .
