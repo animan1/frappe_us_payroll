@@ -1,14 +1,18 @@
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
-CENT = Decimal("0.01")
+from frappe_us_payroll.federal.money import round_money
 
 
 @dataclass(frozen=True)
 class MedicareLiability:
-	employee: Decimal
+	standard_employee: Decimal
 	employer: Decimal
 	additional_employee: Decimal
+
+	@property
+	def total_employee(self) -> Decimal:
+		return self.standard_employee + self.additional_employee
 
 
 def calculate_medicare_liability(
@@ -24,14 +28,10 @@ def calculate_medicare_liability(
 		taxable_wages,
 		max(prior_taxable_wages + taxable_wages - additional_threshold, Decimal("0.00")),
 	)
-	standard = _money(taxable_wages * employee_rate)
-	additional = _money(over_threshold * additional_rate)
+	standard = round_money(taxable_wages * employee_rate)
+	additional = round_money(over_threshold * additional_rate)
 	return MedicareLiability(
-		employee=standard + additional,
+		standard_employee=standard,
 		employer=standard,
 		additional_employee=additional,
 	)
-
-
-def _money(value: Decimal) -> Decimal:
-	return value.quantize(CENT, rounding=ROUND_HALF_UP)
