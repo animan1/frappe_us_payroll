@@ -12,13 +12,24 @@ from frappe_us_payroll.payroll.social_security import (
 	apply_social_security_withholding,
 	taxable_wages,
 )
-from frappe_us_payroll.payroll.ytd import GetAll, prior_taxable_wages
+from frappe_us_payroll.payroll.ytd import (
+	ConflictingDraftSalarySlipsError,
+	GetAll,
+	prior_taxable_wages,
+)
+
+SOCIAL_SECURITY_OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
+
+
+class SalaryStructureAssignment(Protocol):
+	def get(self, fieldname: str) -> str | int | float | None: ...
 
 
 class FrappeSalarySlip(SocialSecuritySalarySlip, Protocol):
 	name: str
 	employee: str
 	payroll_frequency: str
+	_salary_structure_assignment: SalaryStructureAssignment
 
 
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
@@ -34,6 +45,9 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 				current_slip=salary_slip.name,
 				posting_date=salary_slip.posting_date,
 				taxable_components=social_security_components,
+				opening_taxable_wages=_decimal(
+					salary_slip._salary_structure_assignment.get(SOCIAL_SECURITY_OPENING_WAGES_FIELD)
+				),
 			),
 			opening_taxable_wages=Decimal("0.00"),
 		)
@@ -47,6 +61,8 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 		)
 	except MissingSalaryComponentError as error:
 		frappe.throw(str(error), exc=frappe.ValidationError, title="US Payroll Configuration Required")
+	except ConflictingDraftSalarySlipsError as error:
+		frappe.throw(str(error), exc=frappe.ValidationError, title="Conflicting Draft Salary Slips")
 
 
 def _employee_w4(employee_name: str) -> FormW4:
