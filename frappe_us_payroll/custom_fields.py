@@ -105,6 +105,26 @@ def get_custom_fields() -> CustomFieldMap:
 				"non_negative": 1,
 				"allow_on_submit": 1,
 			},
+			{
+				"fieldname": "us_medicare_taxable_wages_till_date",
+				"label": "US Medicare Taxable Wages Till Date",
+				"fieldtype": "Currency",
+				"insert_after": "us_social_security_taxable_wages_till_date",
+				"description": "Opening year-to-date wages before payroll begins in Frappe",
+				"options": "currency",
+				"non_negative": 1,
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "us_futa_taxable_wages_till_date",
+				"label": "US FUTA Taxable Wages Till Date",
+				"fieldtype": "Currency",
+				"insert_after": "us_medicare_taxable_wages_till_date",
+				"description": "Opening year-to-date wages before payroll begins in Frappe",
+				"options": "currency",
+				"non_negative": 1,
+				"allow_on_submit": 1,
+			},
 		],
 		"Salary Slip": [
 			{

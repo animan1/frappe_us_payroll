@@ -1,32 +1,24 @@
 from decimal import Decimal
-from typing import Protocol, cast
+from typing import cast
 
 import frappe
 
 from frappe_us_payroll.custom_fields import W4_FILING_STATUSES
 from frappe_us_payroll.federal.income_tax import FilingStatus, FormW4
 from frappe_us_payroll.payroll.components import MissingSalaryComponentError
-from frappe_us_payroll.payroll.dates import as_date
 from frappe_us_payroll.payroll.income_tax import apply_federal_income_tax_withholding
+from frappe_us_payroll.payroll.protocols import FrappeSalarySlip
 from frappe_us_payroll.payroll.social_security import (
-	SocialSecuritySalarySlip,
 	apply_social_security_withholding,
 	taxable_wages,
 )
+from frappe_us_payroll.payroll.ytd import (
+	ConflictingDraftSalarySlipsError,
+	GetAll,
+	prior_taxable_wages,
+)
 
-OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
-SLIP_WAGES_FIELD = "us_social_security_taxable_wages"
-
-
-class SalaryStructureAssignment(Protocol):
-	def get(self, fieldname: str) -> str | int | float | None: ...
-
-
-class FrappeSalarySlip(SocialSecuritySalarySlip, Protocol):
-	name: str
-	employee: str
-	payroll_frequency: str
-	_salary_structure_assignment: SalaryStructureAssignment
+SOCIAL_SECURITY_OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
 
 
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
@@ -36,8 +28,16 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 		apply_social_security_withholding(
 			salary_slip,
 			taxable_components=social_security_components,
-			prior_taxable_wages=_prior_social_security_wages(salary_slip),
-			opening_taxable_wages=_decimal(salary_slip._salary_structure_assignment.get(OPENING_WAGES_FIELD)),
+			prior_taxable_wages=prior_taxable_wages(
+				get_all=cast(GetAll, frappe.get_all),
+				employee=salary_slip.employee,
+				current_slip=salary_slip.name,
+				posting_date=salary_slip.posting_date,
+				taxable_components=social_security_components,
+				opening_taxable_wages=_decimal(
+					salary_slip._salary_structure_assignment.get(SOCIAL_SECURITY_OPENING_WAGES_FIELD)
+				),
+			),
 		)
 		apply_federal_income_tax_withholding(
 			salary_slip,
@@ -49,6 +49,8 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 		)
 	except MissingSalaryComponentError as error:
 		frappe.throw(str(error), exc=frappe.ValidationError, title="US Payroll Configuration Required")
+	except ConflictingDraftSalarySlipsError as error:
+		frappe.throw(str(error), exc=frappe.ValidationError, title="Conflicting Draft Salary Slips")
 
 
 def _employee_w4(employee_name: str) -> FormW4:
@@ -77,24 +79,6 @@ def _taxable_components(fieldname: str) -> set[str]:
 		pluck="name",
 	)
 	return set(cast(list[str], values))
-
-
-def _prior_social_security_wages(salary_slip: FrappeSalarySlip) -> Decimal:
-	slip_posting_date = as_date(salary_slip.posting_date)
-	values = frappe.get_all(
-		"Salary Slip",
-		filters={
-			"employee": salary_slip.employee,
-			"docstatus": 1,
-			"name": ("!=", salary_slip.name),
-			"posting_date": (
-				"between",
-				(slip_posting_date.replace(month=1, day=1), slip_posting_date),
-			),
-		},
-		pluck=SLIP_WAGES_FIELD,
-	)
-	return sum((_decimal(value) for value in values), Decimal("0"))
 
 
 def _decimal(value: str | int | float | None) -> Decimal:

@@ -1,26 +1,18 @@
 from collections.abc import Iterable, Set
-from datetime import date, datetime
 from decimal import Decimal
-from typing import Protocol
 
 from frappe_us_payroll.federal.social_security import calculate_social_security_withholding
 from frappe_us_payroll.payroll.components import (
 	DEDUCTIONS,
 	EarningRow,
-	SalarySlipComponents,
-	SalarySlipEarnings,
 	as_frappe_currency,
 	set_component_amount,
 )
 from frappe_us_payroll.payroll.dates import as_date
+from frappe_us_payroll.payroll.protocols import SocialSecuritySalarySlip
 
 SOCIAL_SECURITY_COMPONENT = "US Social Security - Employee"
 SOCIAL_SECURITY_COMPONENT_ABBR = "FICA_D"
-
-
-class SocialSecuritySalarySlip(SalarySlipComponents, SalarySlipEarnings, Protocol):
-	posting_date: date | datetime | str
-	us_social_security_taxable_wages: float
 
 
 def taxable_wages(earnings: Iterable[EarningRow], taxable_components: Set[str]) -> Decimal:
@@ -36,13 +28,12 @@ def apply_social_security_withholding(
 	*,
 	taxable_components: Set[str],
 	prior_taxable_wages: Decimal,
-	opening_taxable_wages: Decimal,
 ) -> Decimal:
 	"""Calculate and map employee Social Security withholding onto a Salary Slip."""
 	current_taxable_wages = taxable_wages(salary_slip.earnings, taxable_components)
 	withholding = calculate_social_security_withholding(
 		taxable_wages=current_taxable_wages,
-		prior_taxable_wages=prior_taxable_wages + opening_taxable_wages,
+		prior_taxable_wages=prior_taxable_wages,
 		tax_year=as_date(salary_slip.posting_date).year,
 	)
 

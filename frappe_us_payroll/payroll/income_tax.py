@@ -1,21 +1,15 @@
-from datetime import date, datetime
 from decimal import Decimal
-from typing import Protocol
 
 from frappe_us_payroll.federal.income_tax import (
 	FormW4,
 	PayFrequency,
 	calculate_federal_income_tax_withholding,
 )
-from frappe_us_payroll.payroll.components import DEDUCTIONS, SalarySlipComponents, set_component_amount
+from frappe_us_payroll.payroll.components import DEDUCTIONS, set_component_amount
 from frappe_us_payroll.payroll.dates import as_date
+from frappe_us_payroll.payroll.protocols import FederalIncomeTaxSalarySlip
 
 FEDERAL_INCOME_TAX_COMPONENT = "US - Federal Income Tax"
-
-
-class FederalIncomeTaxSalarySlip(SalarySlipComponents, Protocol):
-	payroll_frequency: str
-	posting_date: date | datetime | str
 
 
 def apply_federal_income_tax_withholding(
