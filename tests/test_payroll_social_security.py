@@ -56,7 +56,6 @@ class SocialSecurityPayrollTest(unittest.TestCase):
 			slip,
 			taxable_components={"Basic"},
 			prior_taxable_wages=Decimal("0"),
-			opening_taxable_wages=Decimal("0"),
 		)
 
 		self.assertEqual(withholding, Decimal("62.00"))
@@ -69,8 +68,7 @@ class SocialSecurityPayrollTest(unittest.TestCase):
 		withholding = apply_social_security_withholding(
 			slip,
 			taxable_components={"Basic"},
-			prior_taxable_wages=Decimal("183000"),
-			opening_taxable_wages=Decimal("1000"),
+			prior_taxable_wages=Decimal("184000"),
 		)
 
 		self.assertEqual(withholding, Decimal("31.00"))

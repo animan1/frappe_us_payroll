@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Protocol, cast
+from typing import cast
 
 import frappe
 
@@ -7,8 +7,8 @@ from frappe_us_payroll.custom_fields import W4_FILING_STATUSES
 from frappe_us_payroll.federal.income_tax import FilingStatus, FormW4
 from frappe_us_payroll.payroll.components import MissingSalaryComponentError
 from frappe_us_payroll.payroll.income_tax import apply_federal_income_tax_withholding
+from frappe_us_payroll.payroll.protocols import FrappeSalarySlip
 from frappe_us_payroll.payroll.social_security import (
-	SocialSecuritySalarySlip,
 	apply_social_security_withholding,
 	taxable_wages,
 )
@@ -19,17 +19,6 @@ from frappe_us_payroll.payroll.ytd import (
 )
 
 SOCIAL_SECURITY_OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
-
-
-class SalaryStructureAssignment(Protocol):
-	def get(self, fieldname: str) -> str | int | float | None: ...
-
-
-class FrappeSalarySlip(SocialSecuritySalarySlip, Protocol):
-	name: str
-	employee: str
-	payroll_frequency: str
-	_salary_structure_assignment: SalaryStructureAssignment
 
 
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
@@ -49,7 +38,6 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 					salary_slip._salary_structure_assignment.get(SOCIAL_SECURITY_OPENING_WAGES_FIELD)
 				),
 			),
-			opening_taxable_wages=Decimal("0.00"),
 		)
 		apply_federal_income_tax_withholding(
 			salary_slip,
