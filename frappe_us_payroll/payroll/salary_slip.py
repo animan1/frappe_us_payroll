@@ -6,7 +6,10 @@ import frappe
 from frappe_us_payroll.custom_fields import W4_FILING_STATUSES
 from frappe_us_payroll.federal.income_tax import FilingStatus, FormW4
 from frappe_us_payroll.payroll.components import MissingSalaryComponentError
+from frappe_us_payroll.payroll.dates import as_date
+from frappe_us_payroll.payroll.futa import apply_futa_liability
 from frappe_us_payroll.payroll.income_tax import apply_federal_income_tax_withholding
+from frappe_us_payroll.payroll.medicare import apply_medicare_liability
 from frappe_us_payroll.payroll.protocols import FrappeSalarySlip
 from frappe_us_payroll.payroll.social_security import (
 	apply_social_security_withholding,
@@ -19,6 +22,8 @@ from frappe_us_payroll.payroll.ytd import (
 )
 
 SOCIAL_SECURITY_OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
+MEDICARE_OPENING_WAGES_FIELD = "us_medicare_taxable_wages_till_date"
+FUTA_OPENING_WAGES_FIELD = "us_futa_taxable_wages_till_date"
 
 
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
@@ -28,15 +33,10 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 		apply_social_security_withholding(
 			salary_slip,
 			taxable_components=social_security_components,
-			prior_taxable_wages=prior_taxable_wages(
-				get_all=cast(GetAll, frappe.get_all),
-				employee=salary_slip.employee,
-				current_slip=salary_slip.name,
-				posting_date=salary_slip.posting_date,
-				taxable_components=social_security_components,
-				opening_taxable_wages=_decimal(
-					salary_slip._salary_structure_assignment.get(SOCIAL_SECURITY_OPENING_WAGES_FIELD)
-				),
+			prior_taxable_wages=_prior_taxable_wages(
+				salary_slip,
+				social_security_components,
+				SOCIAL_SECURITY_OPENING_WAGES_FIELD,
 			),
 		)
 		apply_federal_income_tax_withholding(
@@ -46,6 +46,27 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 				_taxable_components("us_federal_income_taxable"),
 			),
 			form_w4=_employee_w4(salary_slip.employee),
+		)
+		medicare_components = _taxable_components("us_medicare_taxable")
+		apply_medicare_liability(
+			salary_slip,
+			taxable_wages=taxable_wages(salary_slip.earnings, medicare_components),
+			prior_taxable_wages=_prior_taxable_wages(
+				salary_slip,
+				medicare_components,
+				MEDICARE_OPENING_WAGES_FIELD,
+			),
+		)
+		futa_components = _taxable_components("us_futa_taxable")
+		apply_futa_liability(
+			salary_slip,
+			taxable_wages=taxable_wages(salary_slip.earnings, futa_components),
+			prior_taxable_wages=_prior_taxable_wages(
+				salary_slip,
+				futa_components,
+				FUTA_OPENING_WAGES_FIELD,
+			),
+			tax_year=as_date(salary_slip.posting_date).year,
 		)
 	except MissingSalaryComponentError as error:
 		frappe.throw(str(error), exc=frappe.ValidationError, title="US Payroll Configuration Required")
@@ -79,6 +100,21 @@ def _taxable_components(fieldname: str) -> set[str]:
 		pluck="name",
 	)
 	return set(cast(list[str], values))
+
+
+def _prior_taxable_wages(
+	salary_slip: FrappeSalarySlip,
+	components: set[str],
+	opening_wages_field: str,
+) -> Decimal:
+	return prior_taxable_wages(
+		get_all=cast(GetAll, frappe.get_all),
+		employee=salary_slip.employee,
+		current_slip=salary_slip.name,
+		posting_date=salary_slip.posting_date,
+		taxable_components=components,
+		opening_taxable_wages=_decimal(salary_slip._salary_structure_assignment.get(opening_wages_field)),
+	)
 
 
 def _decimal(value: str | int | float | None) -> Decimal:

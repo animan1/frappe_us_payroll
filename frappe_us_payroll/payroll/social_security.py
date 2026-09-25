@@ -2,9 +2,10 @@ from collections.abc import Iterable, Set
 from decimal import Decimal
 
 from frappe_us_payroll.federal.social_security import calculate_social_security_withholding
-from frappe_us_payroll.payroll.component_names import SOCIAL_SECURITY_EMPLOYEE
+from frappe_us_payroll.payroll.component_names import SOCIAL_SECURITY_EMPLOYEE, SOCIAL_SECURITY_EMPLOYER
 from frappe_us_payroll.payroll.components import (
 	DEDUCTIONS,
+	EMPLOYER_CONTRIBUTIONS,
 	EarningRow,
 	as_frappe_currency,
 	set_component_amount,
@@ -37,4 +38,10 @@ def apply_social_security_withholding(
 
 	salary_slip.us_social_security_taxable_wages = as_frappe_currency(current_taxable_wages)
 	set_component_amount(salary_slip, DEDUCTIONS, SOCIAL_SECURITY_EMPLOYEE, withholding)
+	set_component_amount(
+		salary_slip,
+		EMPLOYER_CONTRIBUTIONS,
+		SOCIAL_SECURITY_EMPLOYER,
+		withholding,
+	)
 	return withholding

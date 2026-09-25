@@ -28,8 +28,18 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 		frappe.flags.country = "United States"
 		frappe.db.set_single_value("Payroll Settings", "include_holidays_in_total_working_days", 1)
 		try:
-			company = "_Test Company"
-			currency = frappe.db.get_value("Company", company, "default_currency")
+			company = "_Test Frappe US Payroll Company"
+			frappe.get_doc(
+				{
+					"doctype": "Company",
+					"company_name": company,
+					"abbr": "_FUP",
+					"country": "United States",
+					"default_currency": "USD",
+					"chart_of_accounts": "Standard",
+				}
+			).insert()
+			currency = "USD"
 			holiday_list = frappe.get_doc(
 				{
 					"doctype": "Holiday List",
@@ -139,8 +149,13 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 			self.assertEqual(salary_slip.us_social_security_taxable_wages, 1000)
 			deductions = {row.salary_component: row.amount for row in salary_slip.deductions}
 			self.assertEqual(deductions[SOCIAL_SECURITY_EMPLOYEE], 62)
-			self.assertEqual(salary_slip.total_deduction, 62)
-			self.assertEqual(salary_slip.net_pay, 938)
+			self.assertEqual(deductions[MEDICARE_EMPLOYEE], 14.5)
+			contributions = {row.salary_component: row.amount for row in salary_slip.employer_contributions}
+			self.assertEqual(contributions[SOCIAL_SECURITY_EMPLOYER], 62)
+			self.assertEqual(contributions[MEDICARE_EMPLOYER], 14.5)
+			self.assertEqual(contributions[FUTA_EMPLOYER], 6)
+			self.assertEqual(salary_slip.total_deduction, 76.5)
+			self.assertEqual(salary_slip.net_pay, 923.5)
 		finally:
 			frappe.flags.country = previous_country
 			frappe.db.set_single_value(
