@@ -93,7 +93,10 @@ def get_custom_fields() -> CustomFieldMap:
 				"fieldtype": "Check",
 				"insert_after": "us_federal_income_taxable",
 				"depends_on": 'eval:doc.type == "Earning"',
-				"description": "Uncheck only when this earning is excluded from Medicare wages.",
+				"description": (
+					"Leave checked for ordinary wages. Uncheck only for a payment excluded "
+					"from Medicare wages, such as a qualifying nontaxable fringe benefit."
+				),
 				"default": "1",
 			},
 			{
@@ -102,7 +105,11 @@ def get_custom_fields() -> CustomFieldMap:
 				"fieldtype": "Check",
 				"insert_after": "us_medicare_taxable",
 				"depends_on": 'eval:doc.type == "Earning"',
-				"description": "Uncheck only when this earning is excluded from FUTA wages.",
+				"description": (
+					"Leave checked for ordinary wages. Uncheck only for a payment excluded "
+					"from FUTA wages; employee- or employer-level FUTA exemptions require "
+					"separate applicability rules."
+				),
 				"default": "1",
 			},
 		],
