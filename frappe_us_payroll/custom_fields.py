@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from typing import TypeAlias
 
 CustomFieldValue: TypeAlias = str | int
@@ -8,11 +9,24 @@ W4_FILING_STATUSES = {
 	"Married filing jointly or Qualifying surviving spouse": "married",
 	"Head of household": "hoh",
 }
+WASHINGTON = "Washington"
+JURISDICTION_FIELD_PREFIXES = {WASHINGTON: ("wa_",)}
+SUPPORTED_JURISDICTIONS = frozenset(JURISDICTION_FIELD_PREFIXES)
 
 
-def get_custom_fields() -> CustomFieldMap:
+def get_custom_fields(jurisdictions: Collection[str] = ()) -> CustomFieldMap:
 	"""Return app-owned payroll inputs and calculated wage fields."""
-	return {
+	fields: CustomFieldMap = {
+		"Payroll Settings": [
+			{
+				"fieldname": "us_payroll_jurisdictions",
+				"label": "US Payroll Jurisdictions",
+				"fieldtype": "Table",
+				"options": "US Payroll Jurisdiction",
+				"insert_after": "create_overtime_slip",
+				"description": "Select each state where this site calculates payroll.",
+			},
+		],
 		"Employee": [
 			{
 				"fieldname": "us_w4_section",
@@ -60,6 +74,26 @@ def get_custom_fields() -> CustomFieldMap:
 				"fieldtype": "Currency",
 				"default": "0",
 				"insert_after": "us_w4_deductions",
+			},
+			{
+				"fieldname": "wa_payroll_section",
+				"label": "Washington Payroll",
+				"fieldtype": "Section Break",
+				"insert_after": "us_w4_extra_withholding",
+			},
+			{
+				"fieldname": "wa_paid_leave_exempt",
+				"label": "Exempt from WA Paid Leave",
+				"fieldtype": "Check",
+				"default": "0",
+				"insert_after": "wa_payroll_section",
+			},
+			{
+				"fieldname": "wa_cares_exempt",
+				"label": "Exempt from WA Cares",
+				"fieldtype": "Check",
+				"default": "0",
+				"insert_after": "wa_paid_leave_exempt",
 			},
 		],
 		"Salary Component": [
@@ -112,6 +146,24 @@ def get_custom_fields() -> CustomFieldMap:
 				),
 				"default": "1",
 			},
+			{
+				"fieldname": "wa_paid_leave_taxable",
+				"label": "Subject to WA Paid Leave and WA Cares",
+				"fieldtype": "Check",
+				"insert_after": "us_futa_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": "Uncheck for tips and other earnings excluded from Washington wages.",
+				"default": "1",
+			},
+			{
+				"fieldname": "wa_unemployment_taxable",
+				"label": "Subject to WA Unemployment",
+				"fieldtype": "Check",
+				"insert_after": "wa_paid_leave_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": "Uncheck only when this earning is excluded from WA unemployment wages.",
+				"default": "1",
+			},
 		],
 		"Salary Structure Assignment": [
 			{
@@ -150,6 +202,52 @@ def get_custom_fields() -> CustomFieldMap:
 				"non_negative": 1,
 				"allow_on_submit": 1,
 			},
+			{
+				"fieldname": "wa_payroll_configuration_section",
+				"label": "Washington Payroll",
+				"fieldtype": "Section Break",
+				"insert_after": "us_futa_taxable_wages_till_date",
+			},
+			{
+				"fieldname": "wa_payroll_enabled",
+				"label": "Calculate Washington Payroll",
+				"fieldtype": "Check",
+				"default": "0",
+				"insert_after": "wa_payroll_configuration_section",
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "wa_pfml_employer_share_required",
+				"label": "Pay WA Paid Leave Employer Share",
+				"fieldtype": "Check",
+				"default": "0",
+				"insert_after": "wa_payroll_enabled",
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "wa_unemployment_rate",
+				"label": "WA Unemployment Rate",
+				"fieldtype": "Percent",
+				"insert_after": "wa_pfml_employer_share_required",
+				"description": "Employer-specific rate from the Employment Security Department.",
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "wa_li_employee_rate_per_hour",
+				"label": "WA L&I Employee Rate per Hour",
+				"fieldtype": "Float",
+				"precision": "6",
+				"insert_after": "wa_unemployment_rate",
+				"allow_on_submit": 1,
+			},
+			{
+				"fieldname": "wa_li_employer_rate_per_hour",
+				"label": "WA L&I Employer Rate per Hour",
+				"fieldtype": "Float",
+				"precision": "6",
+				"insert_after": "wa_li_employee_rate_per_hour",
+				"allow_on_submit": 1,
+			},
 		],
 		"Salary Slip": [
 			{
@@ -183,5 +281,41 @@ def get_custom_fields() -> CustomFieldMap:
 				"no_copy": 1,
 				"print_hide": 1,
 			},
+			{
+				"fieldname": "wa_paid_leave_taxable_wages",
+				"label": "WA Paid Leave Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "us_futa_taxable_wages",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
+			{
+				"fieldname": "wa_unemployment_taxable_wages",
+				"label": "WA Unemployment Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "wa_paid_leave_taxable_wages",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
 		],
 	}
+	return {
+		doctype: [
+			field
+			for field in definitions
+			if (jurisdiction := _field_jurisdiction(field)) is None or jurisdiction in jurisdictions
+		]
+		for doctype, definitions in fields.items()
+	}
+
+
+def _field_jurisdiction(field: CustomFieldDefinition) -> str | None:
+	fieldname = field["fieldname"]
+	if not isinstance(fieldname, str):
+		return None
+	for jurisdiction, prefixes in JURISDICTION_FIELD_PREFIXES.items():
+		if fieldname.startswith(prefixes):
+			return jurisdiction
+	return None

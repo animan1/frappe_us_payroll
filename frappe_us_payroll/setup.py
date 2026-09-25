@@ -1,9 +1,12 @@
+from collections.abc import Sequence
+from typing import Protocol, cast
+
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from hrms.setup import delete_custom_fields
 
-from frappe_us_payroll.custom_fields import get_custom_fields
+from frappe_us_payroll.custom_fields import SUPPORTED_JURISDICTIONS, WASHINGTON, get_custom_fields
 from frappe_us_payroll.payroll.component_names import (
 	FEDERAL_INCOME_TAX,
 	FEDERAL_INCOME_TAX_ABBR,
@@ -17,15 +20,25 @@ from frappe_us_payroll.payroll.component_names import (
 	SOCIAL_SECURITY_EMPLOYEE_ABBR,
 	SOCIAL_SECURITY_EMPLOYER,
 	SOCIAL_SECURITY_EMPLOYER_ABBR,
+	WA_CARES_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYEE,
+	WA_INDUSTRIAL_INSURANCE_EMPLOYER,
+	WA_PAID_LEAVE_EMPLOYEE,
+	WA_PAID_LEAVE_EMPLOYER,
+	WA_UNEMPLOYMENT_EMPLOYER,
 )
 
-TAXABLE_EARNING_FIELDS = (
+FEDERAL_TAXABLE_EARNING_FIELDS = (
 	"us_social_security_taxable",
 	"us_federal_income_taxable",
 	"us_medicare_taxable",
 	"us_futa_taxable",
 )
-SALARY_COMPONENTS = {
+WASHINGTON_TAXABLE_EARNING_FIELDS = (
+	"wa_paid_leave_taxable",
+	"wa_unemployment_taxable",
+)
+FEDERAL_SALARY_COMPONENTS = {
 	SOCIAL_SECURITY_EMPLOYEE: {
 		"type": "Deduction",
 		"salary_component_abbr": SOCIAL_SECURITY_EMPLOYEE_ABBR,
@@ -57,24 +70,86 @@ SALARY_COMPONENTS = {
 		"description": "Federal unemployment liability calculated by Frappe US Payroll",
 	},
 }
+WASHINGTON_SALARY_COMPONENTS = {
+	WA_PAID_LEAVE_EMPLOYEE: {
+		"type": "Deduction",
+		"salary_component_abbr": "WA_PFML_D",
+		"description": "Employee WA Paid Leave premium calculated by Frappe US Payroll",
+	},
+	WA_CARES_EMPLOYEE: {
+		"type": "Deduction",
+		"salary_component_abbr": "WA_Cares",
+		"description": "Employee WA Cares premium calculated by Frappe US Payroll",
+	},
+	WA_INDUSTRIAL_INSURANCE_EMPLOYEE: {
+		"type": "Deduction",
+		"salary_component_abbr": "WA_LI_D",
+		"description": "Employee WA L&I premium calculated by Frappe US Payroll",
+	},
+	WA_PAID_LEAVE_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "WA_PFML_C",
+		"description": "Employer WA Paid Leave liability calculated by Frappe US Payroll",
+	},
+	WA_INDUSTRIAL_INSURANCE_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "WA_LI_C",
+		"description": "Employer WA L&I liability calculated by Frappe US Payroll",
+	},
+	WA_UNEMPLOYMENT_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "WA_UI",
+		"description": "Employer WA unemployment liability calculated by Frappe US Payroll",
+	},
+}
+JURISDICTION_TAXABLE_EARNING_FIELDS = {
+	WASHINGTON: WASHINGTON_TAXABLE_EARNING_FIELDS,
+}
+JURISDICTION_SALARY_COMPONENTS = {
+	WASHINGTON: WASHINGTON_SALARY_COMPONENTS,
+}
 
 
-def install_custom_fields() -> None:
+class JurisdictionRow(Protocol):
+	jurisdiction: str
+
+
+class PayrollSettings(Protocol):
+	us_payroll_jurisdictions: Sequence[JurisdictionRow]
+
+
+def install_custom_fields(doc: object | None = None, method: str | None = None) -> None:
 	"""Create or update the app-owned payroll fields and components."""
+	# The selection field must exist before a fresh site can choose jurisdictions.
+	create_custom_fields(get_custom_fields(), update=True)
+	jurisdictions = get_enabled_jurisdictions(doc)
+	taxability_fields = list(FEDERAL_TAXABLE_EARNING_FIELDS)
+	for jurisdiction in jurisdictions:
+		taxability_fields.extend(JURISDICTION_TAXABLE_EARNING_FIELDS[jurisdiction])
 	new_taxability_fields = [
 		fieldname
-		for fieldname in TAXABLE_EARNING_FIELDS
+		for fieldname in taxability_fields
 		if not frappe.db.exists("Custom Field", f"Salary Component-{fieldname}")
 	]
-	create_custom_fields(get_custom_fields(), update=True)
+	create_custom_fields(get_custom_fields(jurisdictions), update=True)
 	for fieldname in new_taxability_fields:
 		enable_taxability_for_existing_earnings(fieldname)
-	install_salary_components()
+	install_salary_components(jurisdictions)
 
 
-def install_salary_components() -> None:
+def get_enabled_jurisdictions(doc: object | None = None) -> set[str]:
+	"""Return supported jurisdictions selected in Payroll Settings."""
+	settings = cast(PayrollSettings, doc if doc is not None else frappe.get_single("Payroll Settings"))
+	rows = settings.us_payroll_jurisdictions or ()
+	return {row.jurisdiction for row in rows if row.jurisdiction in SUPPORTED_JURISDICTIONS}
+
+
+def install_salary_components(jurisdictions: set[str]) -> None:
 	"""Create required app-owned Salary Components without changing existing configuration."""
-	for component_name, values in SALARY_COMPONENTS.items():
+	components = dict(FEDERAL_SALARY_COMPONENTS)
+	for jurisdiction in jurisdictions:
+		components.update(JURISDICTION_SALARY_COMPONENTS[jurisdiction])
+	for component_name, values in components.items():
 		# Existing components may have live abbreviations, formulas, or account mappings.
 		if frappe.db.exists("Salary Component", component_name):
 			continue
@@ -108,4 +183,4 @@ def enable_social_security_for_existing_earnings() -> None:
 
 def uninstall_custom_fields() -> None:
 	"""Remove the app-owned payroll fields during app uninstall."""
-	delete_custom_fields(get_custom_fields())
+	delete_custom_fields(get_custom_fields(SUPPORTED_JURISDICTIONS))
