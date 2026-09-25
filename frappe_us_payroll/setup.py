@@ -4,10 +4,13 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from hrms.setup import delete_custom_fields
 
 from frappe_us_payroll.custom_fields import get_custom_fields
-from frappe_us_payroll.payroll.income_tax import FEDERAL_INCOME_TAX_COMPONENT
-from frappe_us_payroll.payroll.social_security import (
-	SOCIAL_SECURITY_COMPONENT,
-	SOCIAL_SECURITY_COMPONENT_ABBR,
+from frappe_us_payroll.payroll.component_names import (
+	FEDERAL_INCOME_TAX,
+	FUTA_EMPLOYER,
+	MEDICARE_EMPLOYEE,
+	MEDICARE_EMPLOYER,
+	SOCIAL_SECURITY_EMPLOYEE,
+	SOCIAL_SECURITY_EMPLOYER,
 )
 
 TAXABLE_EARNING_FIELDS = (
@@ -17,13 +20,35 @@ TAXABLE_EARNING_FIELDS = (
 	"us_futa_taxable",
 )
 SALARY_COMPONENTS = {
-	SOCIAL_SECURITY_COMPONENT: {
-		"salary_component_abbr": SOCIAL_SECURITY_COMPONENT_ABBR,
+	SOCIAL_SECURITY_EMPLOYEE: {
+		"type": "Deduction",
+		"salary_component_abbr": "FICA_D",
 		"description": "Employee Social Security tax withheld by Frappe US Payroll",
 	},
-	FEDERAL_INCOME_TAX_COMPONENT: {
+	FEDERAL_INCOME_TAX: {
+		"type": "Deduction",
 		"salary_component_abbr": "FIT",
 		"description": "Federal income tax withheld by Frappe US Payroll",
+	},
+	MEDICARE_EMPLOYEE: {
+		"type": "Deduction",
+		"salary_component_abbr": "Med_D",
+		"description": "Employee Medicare tax withheld by Frappe US Payroll",
+	},
+	SOCIAL_SECURITY_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "FICA_C",
+		"description": "Employer Social Security liability calculated by Frappe US Payroll",
+	},
+	MEDICARE_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "Med_C",
+		"description": "Employer Medicare liability calculated by Frappe US Payroll",
+	},
+	FUTA_EMPLOYER: {
+		"type": "Employer Contribution",
+		"salary_component_abbr": "FUTA",
+		"description": "Federal unemployment liability calculated by Frappe US Payroll",
 	},
 }
 
@@ -51,7 +76,7 @@ def install_salary_components() -> None:
 			{
 				"doctype": "Salary Component",
 				"salary_component": component_name,
-				"type": "Deduction",
+				"type": values["type"],
 				"depends_on_payment_days": 0,
 				"remove_if_zero_valued": 0,
 				**values,

@@ -5,11 +5,10 @@ from frappe_us_payroll.federal.income_tax import (
 	PayFrequency,
 	calculate_federal_income_tax_withholding,
 )
+from frappe_us_payroll.payroll.component_names import FEDERAL_INCOME_TAX
 from frappe_us_payroll.payroll.components import DEDUCTIONS, set_component_amount
 from frappe_us_payroll.payroll.dates import as_date
 from frappe_us_payroll.payroll.protocols import FederalIncomeTaxSalarySlip
-
-FEDERAL_INCOME_TAX_COMPONENT = "US - Federal Income Tax"
 
 
 def apply_federal_income_tax_withholding(
@@ -24,7 +23,7 @@ def apply_federal_income_tax_withholding(
 		form_w4=form_w4,
 		tax_year=as_date(salary_slip.posting_date).year,
 	)
-	set_component_amount(salary_slip, DEDUCTIONS, FEDERAL_INCOME_TAX_COMPONENT, withholding)
+	set_component_amount(salary_slip, DEDUCTIONS, FEDERAL_INCOME_TAX, withholding)
 	return withholding
 
 
