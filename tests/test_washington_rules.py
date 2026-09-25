@@ -12,8 +12,8 @@ from frappe_us_payroll.washington.rules import (
 class WashingtonRulesTest(unittest.TestCase):
 	def test_paid_leave_uses_2026_employee_and_employer_shares(self) -> None:
 		liability = calculate_paid_leave(
-			taxable_wages=Decimal("1000"),
-			prior_taxable_wages=Decimal("0"),
+			covered_wages=Decimal("1000"),
+			prior_covered_wages=Decimal("0"),
 			tax_year=2026,
 			employer_share_required=True,
 		)
@@ -23,8 +23,8 @@ class WashingtonRulesTest(unittest.TestCase):
 
 	def test_paid_leave_caps_current_wages_at_the_annual_base(self) -> None:
 		liability = calculate_paid_leave(
-			taxable_wages=Decimal("1000"),
-			prior_taxable_wages=Decimal("184000"),
+			covered_wages=Decimal("1000"),
+			prior_covered_wages=Decimal("184000"),
 			tax_year=2026,
 			employer_share_required=False,
 		)
@@ -34,7 +34,7 @@ class WashingtonRulesTest(unittest.TestCase):
 
 	def test_cares_has_no_social_security_wage_cap(self) -> None:
 		self.assertEqual(
-			calculate_cares(taxable_wages=Decimal("200000"), tax_year=2026),
+			calculate_cares(covered_wages=Decimal("200000"), tax_year=2026),
 			Decimal("1160.00"),
 		)
 
@@ -61,7 +61,7 @@ class WashingtonRulesTest(unittest.TestCase):
 
 	def test_unknown_year_fails_closed(self) -> None:
 		with self.assertRaisesRegex(ValueError, "not available for 2027"):
-			calculate_cares(taxable_wages=Decimal("1000"), tax_year=2027)
+			calculate_cares(covered_wages=Decimal("1000"), tax_year=2027)
 
 
 if __name__ == "__main__":

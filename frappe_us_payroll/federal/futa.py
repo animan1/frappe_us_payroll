@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from frappe_us_payroll.federal.money import round_money
+from frappe_us_payroll.money import round_money
+from frappe_us_payroll.wage_base import wages_below_base
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,5 @@ def calculate_futa_liability(
 		rule = RULES[tax_year]
 	except KeyError as error:
 		raise ValueError(f"FUTA rules are not available for {tax_year}") from error
-	remaining_wage_base = max(rule.wage_base - prior_taxable_wages, Decimal("0.00"))
-	current_taxable_wages = min(taxable_wages, remaining_wage_base)
+	current_taxable_wages = wages_below_base(taxable_wages, prior_taxable_wages, rule.wage_base)
 	return round_money(current_taxable_wages * rule.effective_rate)

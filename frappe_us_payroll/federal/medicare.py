@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from frappe_us_payroll.federal.money import round_money
+from frappe_us_payroll.money import round_money
 
 
 @dataclass(frozen=True)

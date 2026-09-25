@@ -1,6 +1,7 @@
 from decimal import ROUND_HALF_UP, Decimal
 
 CENT = Decimal("0.01")
+ZERO = Decimal("0.00")
 
 
 def round_money(value: Decimal) -> Decimal:
