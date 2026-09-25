@@ -13,7 +13,7 @@ COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip test-site enable-tests deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip test-site test-site-reset enable-tests deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -103,6 +103,11 @@ test-site: register bench-deps ## Create or migrate the isolated Frappe test sit
 			--db-root-password $(DB_ROOT_PASSWORD) \
 			--install-app erpnext --install-app hrms --install-app $(APP)'
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(TEST_SITE) migrate
+
+test-site-reset: register bench-deps ## Recreate the disposable Frappe test site from scratch.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench drop-site $(TEST_SITE) \
+		--db-root-password $(DB_ROOT_PASSWORD) --force --no-backup
+	@$(MAKE) test-site
 
 enable-tests: test-site ## Enable Frappe tests only on the isolated test site.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(TEST_SITE) set-config allow_tests true
