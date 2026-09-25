@@ -18,7 +18,21 @@ class FederalIncomeTaxSalarySlip(SalarySlipComponents, Protocol):
 	posting_date: date | datetime | str
 
 
-class FrappeSalarySlip(SocialSecuritySalarySlip, FederalIncomeTaxSalarySlip, Protocol):
+class MedicareSalarySlip(SalarySlipComponents, Protocol):
+	us_medicare_taxable_wages: float
+
+
+class FutaSalarySlip(SalarySlipComponents, Protocol):
+	us_futa_taxable_wages: float
+
+
+class FrappeSalarySlip(
+	SocialSecuritySalarySlip,
+	FederalIncomeTaxSalarySlip,
+	MedicareSalarySlip,
+	FutaSalarySlip,
+	Protocol,
+):
 	name: str
 	employee: str
 	_salary_structure_assignment: SalaryStructureAssignment
