@@ -35,22 +35,6 @@ for unsupported years. Employer-specific unemployment and L&I rates remain effec
 See the [Washington payroll decision](docs/decisions/0003-washington-rule-configuration.md) for sources and the
 reason for this boundary.
 
-## Cutover YTD import
-
-The TimeTrex importer creates one exact, submitted opening Salary Slip per employee. It creates no Salary
-Components and defaults to a read-only preview. Stream an export from the host so it never needs to be copied
-into Docker:
-
-```console
-make ytd-preview TAX_YEAR=2026 THROUGH_DATE=2026-08-29 < timetrex.csv
-make ytd-import TAX_YEAR=2026 THROUGH_DATE=2026-08-29 < timetrex.csv
-```
-
-The importer rejects unknown nonzero columns, ambiguous employees, missing or mistyped components, inconsistent
-source totals, and existing opening slips. Use `YTD_REPLACE=--replace` only to recreate a slip previously created
-by this script. Submitted opening-slip earnings feed the same native YTD queries as ordinary Salary Slips, so do
-not also enter the same wages in the legacy “Till Date” field.
-
 ## Development
 
 The local development environment extends HRMS's Docker Compose configuration. The repository is bind-mounted
@@ -87,4 +71,4 @@ stack license-compatible; the choice is not imposed by Frappe Framework alone.
 
 The Salary Slip regional hook calculates federal income-tax withholding, employee and employer Social Security,
 employee and employer Medicare, FUTA, WA Paid Leave, WA Cares, WA unemployment, and hourly WA L&I. Submitted
-Salary Slips supply annual wage-limit state, including exact TimeTrex opening slips at a midyear cutover.
+Salary Slips supply annual wage-limit state.
