@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from typing import TypeAlias
 
 CustomFieldValue: TypeAlias = str | int
@@ -8,11 +9,24 @@ W4_FILING_STATUSES = {
 	"Married filing jointly or Qualifying surviving spouse": "married",
 	"Head of household": "hoh",
 }
+WASHINGTON = "Washington"
+JURISDICTION_FIELD_PREFIXES = {WASHINGTON: ("wa_",)}
+SUPPORTED_JURISDICTIONS = frozenset(JURISDICTION_FIELD_PREFIXES)
 
 
-def get_custom_fields() -> CustomFieldMap:
+def get_custom_fields(jurisdictions: Collection[str] = ()) -> CustomFieldMap:
 	"""Return app-owned payroll inputs and calculated wage fields."""
-	return {
+	fields: CustomFieldMap = {
+		"Payroll Settings": [
+			{
+				"fieldname": "us_payroll_jurisdictions",
+				"label": "US Payroll Jurisdictions",
+				"fieldtype": "Table",
+				"options": "US Payroll Jurisdiction",
+				"insert_after": "create_overtime_slip",
+				"description": "Select each state where this site calculates payroll.",
+			},
+		],
 		"Employee": [
 			{
 				"fieldname": "us_w4_section",
@@ -287,3 +301,21 @@ def get_custom_fields() -> CustomFieldMap:
 			},
 		],
 	}
+	return {
+		doctype: [
+			field
+			for field in definitions
+			if (jurisdiction := _field_jurisdiction(field)) is None or jurisdiction in jurisdictions
+		]
+		for doctype, definitions in fields.items()
+	}
+
+
+def _field_jurisdiction(field: CustomFieldDefinition) -> str | None:
+	fieldname = field["fieldname"]
+	if not isinstance(fieldname, str):
+		return None
+	for jurisdiction, prefixes in JURISDICTION_FIELD_PREFIXES.items():
+		if fieldname.startswith(prefixes):
+			return jurisdiction
+	return None

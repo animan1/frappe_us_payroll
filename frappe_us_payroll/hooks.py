@@ -12,6 +12,12 @@ after_migrate = "frappe_us_payroll.setup.install_custom_fields"
 before_uninstall = "frappe_us_payroll.setup.uninstall_custom_fields"
 before_tests = "hrms.tests.test_utils.before_tests"
 
+doc_events = {
+	"Payroll Settings": {
+		"on_update": "frappe_us_payroll.setup.install_custom_fields",
+	},
+}
+
 regional_overrides = {
 	"United States": {
 		"hrms.payroll.doctype.salary_slip.salary_slip.apply_regional_deductions": (
