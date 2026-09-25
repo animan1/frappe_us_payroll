@@ -20,6 +20,7 @@ from frappe_us_payroll.payroll.ytd import (
 	GetAll,
 	prior_taxable_wages,
 )
+from frappe_us_payroll.washington.frappe import apply_washington_payroll
 
 SOCIAL_SECURITY_OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
 MEDICARE_OPENING_WAGES_FIELD = "us_medicare_taxable_wages_till_date"
@@ -68,6 +69,8 @@ def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 			),
 			tax_year=as_date(salary_slip.posting_date).year,
 		)
+		if bool(salary_slip._salary_structure_assignment.get("wa_payroll_enabled")):
+			apply_washington_payroll(salary_slip)
 	except MissingSalaryComponentError as error:
 		frappe.throw(str(error), exc=frappe.ValidationError, title="US Payroll Configuration Required")
 	except ConflictingDraftSalarySlipsError as error:

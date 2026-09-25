@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import Protocol
 
 from frappe_us_payroll.payroll.components import SalarySlipComponents, SalarySlipEarnings
+from frappe_us_payroll.washington.salary_slip import WashingtonSalarySlip
 
 
 class SalaryStructureAssignment(Protocol):
@@ -31,8 +32,10 @@ class FrappeSalarySlip(
 	FederalIncomeTaxSalarySlip,
 	MedicareSalarySlip,
 	FutaSalarySlip,
+	WashingtonSalarySlip,
 	Protocol,
 ):
 	name: str
 	employee: str
+	total_working_hours: float
 	_salary_structure_assignment: SalaryStructureAssignment
