@@ -7,13 +7,16 @@ TEST_SITE ?= frappe-us-payroll.localhost
 TEST_ADMIN_PASSWORD ?= Administrator
 DB_ROOT_PASSWORD ?= 123
 SLIP ?=
+TAX_YEAR ?=
+THROUGH_DATE ?=
+YTD_REPLACE ?=
 BENCH_DIR ?= /home/frappe/frappe-bench
 UV_CACHE_DIR ?= /tmp/frappe-us-payroll-uv-cache
 COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
 COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip test-site test-site-reset enable-tests deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps migrate e2e-demo recalculate-slip ytd-preview ytd-import test-site test-site-reset enable-tests deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -85,6 +88,21 @@ e2e-demo: bench-deps ## Create a persistent $1,000 Salary Slip for manual UI rev
 recalculate-slip: bench-deps ## Recalculate a draft Salary Slip; pass SLIP="...".
 	@test -n "$(SLIP)" || (echo 'SLIP is required' >&2; exit 2)
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe bench --site $(SITE) execute frappe_us_payroll.development.recalculate_salary_slip --args '["$(SLIP)"]'
+
+ytd-preview: bench-deps ## Preview TimeTrex YTD opening slips from stdin; pass TAX_YEAR and THROUGH_DATE.
+	@test -n "$(TAX_YEAR)" || (echo 'TAX_YEAR is required' >&2; exit 2)
+	@test -n "$(THROUGH_DATE)" || (echo 'THROUGH_DATE is required' >&2; exit 2)
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe \
+		env/bin/python apps/$(APP)/scripts/import_timetrex_ytd.py \
+		--site $(SITE) --file - --tax-year $(TAX_YEAR) --through-date $(THROUGH_DATE)
+
+ytd-import: bench-deps ## Import TimeTrex YTD opening slips from stdin; set YTD_REPLACE=--replace to replace prior imports.
+	@test -n "$(TAX_YEAR)" || (echo 'TAX_YEAR is required' >&2; exit 2)
+	@test -n "$(THROUGH_DATE)" || (echo 'THROUGH_DATE is required' >&2; exit 2)
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe \
+		env/bin/python apps/$(APP)/scripts/import_timetrex_ytd.py \
+		--site $(SITE) --file - --tax-year $(TAX_YEAR) --through-date $(THROUGH_DATE) \
+		--apply $(YTD_REPLACE)
 
 deps-lock: ## Resolve application and development dependencies into uv.lock.
 	UV_CACHE_DIR=$(UV_CACHE_DIR) uv lock
