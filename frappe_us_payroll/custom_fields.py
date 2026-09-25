@@ -11,7 +11,7 @@ W4_FILING_STATUSES = {
 
 
 def get_custom_fields() -> CustomFieldMap:
-	"""Return the persisted inputs and outputs needed for Social Security wages."""
+	"""Return app-owned payroll inputs and calculated wage fields."""
 	return {
 		"Employee": [
 			{
@@ -87,6 +87,31 @@ def get_custom_fields() -> CustomFieldMap:
 				),
 				"default": "1",
 			},
+			{
+				"fieldname": "us_medicare_taxable",
+				"label": "Subject to US Medicare",
+				"fieldtype": "Check",
+				"insert_after": "us_federal_income_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": (
+					"Leave checked for ordinary wages. Uncheck only for a payment excluded "
+					"from Medicare wages, such as a qualifying nontaxable fringe benefit."
+				),
+				"default": "1",
+			},
+			{
+				"fieldname": "us_futa_taxable",
+				"label": "Subject to FUTA",
+				"fieldtype": "Check",
+				"insert_after": "us_medicare_taxable",
+				"depends_on": 'eval:doc.type == "Earning"',
+				"description": (
+					"Leave checked for ordinary wages. Uncheck only for a payment excluded "
+					"from FUTA wages; employee- or employer-level FUTA exemptions require "
+					"separate applicability rules."
+				),
+				"default": "1",
+			},
 		],
 		"Salary Structure Assignment": [
 			{
@@ -136,6 +161,27 @@ def get_custom_fields() -> CustomFieldMap:
 				"options": "currency",
 				"read_only": 1,
 				"no_copy": 1,
+			},
+			{
+				"fieldname": "us_medicare_taxable_wages",
+				"label": "US Medicare Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "us_social_security_taxable_wages",
+				"description": "Wages from this slip subject to Medicare",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+			},
+			{
+				"fieldname": "us_futa_taxable_wages",
+				"label": "US FUTA Taxable Wages",
+				"fieldtype": "Currency",
+				"insert_after": "us_medicare_taxable_wages",
+				"description": "Wages from this slip subject to FUTA before its annual wage limit",
+				"options": "currency",
+				"read_only": 1,
+				"no_copy": 1,
+				"print_hide": 1,
 			},
 		],
 	}

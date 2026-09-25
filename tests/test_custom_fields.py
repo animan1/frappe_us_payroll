@@ -22,6 +22,8 @@ class CustomFieldsTest(unittest.TestCase):
 				"Salary Component": [
 					"us_social_security_taxable",
 					"us_federal_income_taxable",
+					"us_medicare_taxable",
+					"us_futa_taxable",
 				],
 				"Salary Structure Assignment": [
 					"us_payroll_opening_balances_section",
@@ -29,7 +31,11 @@ class CustomFieldsTest(unittest.TestCase):
 					"us_medicare_taxable_wages_till_date",
 					"us_futa_taxable_wages_till_date",
 				],
-				"Salary Slip": ["us_social_security_taxable_wages"],
+				"Salary Slip": [
+					"us_social_security_taxable_wages",
+					"us_medicare_taxable_wages",
+					"us_futa_taxable_wages",
+				],
 			},
 		)
 
@@ -51,10 +57,13 @@ class CustomFieldsTest(unittest.TestCase):
 			self.assertIn("Uncheck", description)
 
 	def test_salary_slip_wages_are_persisted_output(self) -> None:
-		salary_slip_field = get_custom_fields()["Salary Slip"][0]
+		salary_slip_fields = get_custom_fields()["Salary Slip"]
+		salary_slip_field = salary_slip_fields[0]
 
 		self.assertEqual(salary_slip_field["read_only"], 1)
 		self.assertEqual(salary_slip_field["no_copy"], 1)
+		self.assertTrue(all(field["read_only"] == 1 for field in salary_slip_fields))
+		self.assertTrue(all(field["no_copy"] == 1 for field in salary_slip_fields))
 
 
 if __name__ == "__main__":
