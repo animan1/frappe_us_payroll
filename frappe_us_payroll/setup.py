@@ -6,11 +6,17 @@ from hrms.setup import delete_custom_fields
 from frappe_us_payroll.custom_fields import get_custom_fields
 from frappe_us_payroll.payroll.component_names import (
 	FEDERAL_INCOME_TAX,
+	FEDERAL_INCOME_TAX_ABBR,
 	FUTA_EMPLOYER,
+	FUTA_EMPLOYER_ABBR,
 	MEDICARE_EMPLOYEE,
+	MEDICARE_EMPLOYEE_ABBR,
 	MEDICARE_EMPLOYER,
+	MEDICARE_EMPLOYER_ABBR,
 	SOCIAL_SECURITY_EMPLOYEE,
+	SOCIAL_SECURITY_EMPLOYEE_ABBR,
 	SOCIAL_SECURITY_EMPLOYER,
+	SOCIAL_SECURITY_EMPLOYER_ABBR,
 )
 
 TAXABLE_EARNING_FIELDS = (
@@ -22,32 +28,32 @@ TAXABLE_EARNING_FIELDS = (
 SALARY_COMPONENTS = {
 	SOCIAL_SECURITY_EMPLOYEE: {
 		"type": "Deduction",
-		"salary_component_abbr": "FICA_D",
+		"salary_component_abbr": SOCIAL_SECURITY_EMPLOYEE_ABBR,
 		"description": "Employee Social Security tax withheld by Frappe US Payroll",
 	},
 	FEDERAL_INCOME_TAX: {
 		"type": "Deduction",
-		"salary_component_abbr": "FIT",
+		"salary_component_abbr": FEDERAL_INCOME_TAX_ABBR,
 		"description": "Federal income tax withheld by Frappe US Payroll",
 	},
 	MEDICARE_EMPLOYEE: {
 		"type": "Deduction",
-		"salary_component_abbr": "Med_D",
+		"salary_component_abbr": MEDICARE_EMPLOYEE_ABBR,
 		"description": "Employee Medicare tax withheld by Frappe US Payroll",
 	},
 	SOCIAL_SECURITY_EMPLOYER: {
 		"type": "Employer Contribution",
-		"salary_component_abbr": "FICA_C",
+		"salary_component_abbr": SOCIAL_SECURITY_EMPLOYER_ABBR,
 		"description": "Employer Social Security liability calculated by Frappe US Payroll",
 	},
 	MEDICARE_EMPLOYER: {
 		"type": "Employer Contribution",
-		"salary_component_abbr": "Med_C",
+		"salary_component_abbr": MEDICARE_EMPLOYER_ABBR,
 		"description": "Employer Medicare liability calculated by Frappe US Payroll",
 	},
 	FUTA_EMPLOYER: {
 		"type": "Employer Contribution",
-		"salary_component_abbr": "FUTA",
+		"salary_component_abbr": FUTA_EMPLOYER_ABBR,
 		"description": "Federal unemployment liability calculated by Frappe US Payroll",
 	},
 }

@@ -5,11 +5,17 @@ from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_s
 
 from frappe_us_payroll.payroll.component_names import (
 	FEDERAL_INCOME_TAX,
+	FEDERAL_INCOME_TAX_ABBR,
 	FUTA_EMPLOYER,
+	FUTA_EMPLOYER_ABBR,
 	MEDICARE_EMPLOYEE,
+	MEDICARE_EMPLOYEE_ABBR,
 	MEDICARE_EMPLOYER,
+	MEDICARE_EMPLOYER_ABBR,
 	SOCIAL_SECURITY_EMPLOYEE,
+	SOCIAL_SECURITY_EMPLOYEE_ABBR,
 	SOCIAL_SECURITY_EMPLOYER,
+	SOCIAL_SECURITY_EMPLOYER_ABBR,
 )
 
 
@@ -73,19 +79,19 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 					"deductions": [
 						{
 							"salary_component": SOCIAL_SECURITY_EMPLOYEE,
-							"abbr": "FICA_D",
+							"abbr": SOCIAL_SECURITY_EMPLOYEE_ABBR,
 							"amount": 0,
 							"depends_on_payment_days": 0,
 						},
 						{
 							"salary_component": FEDERAL_INCOME_TAX,
-							"abbr": "FIT",
+							"abbr": FEDERAL_INCOME_TAX_ABBR,
 							"amount": 0,
 							"depends_on_payment_days": 0,
 						},
 						{
 							"salary_component": MEDICARE_EMPLOYEE,
-							"abbr": "Med_D",
+							"abbr": MEDICARE_EMPLOYEE_ABBR,
 							"amount": 0,
 							"depends_on_payment_days": 0,
 						},
@@ -93,17 +99,17 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 					"employer_contributions": [
 						{
 							"salary_component": SOCIAL_SECURITY_EMPLOYER,
-							"abbr": "FICA_C",
+							"abbr": SOCIAL_SECURITY_EMPLOYER_ABBR,
 							"amount": 0,
 						},
 						{
 							"salary_component": MEDICARE_EMPLOYER,
-							"abbr": "Med_C",
+							"abbr": MEDICARE_EMPLOYER_ABBR,
 							"amount": 0,
 						},
 						{
 							"salary_component": FUTA_EMPLOYER,
-							"abbr": "FUTA",
+							"abbr": FUTA_EMPLOYER_ABBR,
 							"amount": 0,
 						},
 					],
