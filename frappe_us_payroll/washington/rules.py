@@ -11,8 +11,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TypeVar
 
-from frappe_us_payroll.money import ZERO, round_money
-from frappe_us_payroll.wage_base import wages_below_base
+from frappe_us_payroll.money import ZERO, round_money, wages_below_base
 
 Rule = TypeVar("Rule")
 
