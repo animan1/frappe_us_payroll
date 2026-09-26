@@ -1,6 +1,5 @@
-from collections.abc import Iterable
 from decimal import Decimal
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 import frappe
 
@@ -11,7 +10,7 @@ from frappe_us_payroll.payroll.dates import as_date
 from frappe_us_payroll.payroll.futa import apply_futa_liability
 from frappe_us_payroll.payroll.income_tax import apply_federal_income_tax_withholding
 from frappe_us_payroll.payroll.medicare import apply_medicare_liability
-from frappe_us_payroll.payroll.protocols import FrappeSalarySlip
+from frappe_us_payroll.payroll.protocols import FrappeSalarySlip, RecalculableSalarySlip
 from frappe_us_payroll.payroll.social_security import (
 	apply_social_security_withholding,
 	taxable_wages,
@@ -26,26 +25,6 @@ from frappe_us_payroll.washington.frappe import apply_washington_payroll
 SOCIAL_SECURITY_OPENING_WAGES_FIELD = "us_social_security_taxable_wages_till_date"
 MEDICARE_OPENING_WAGES_FIELD = "us_medicare_taxable_wages_till_date"
 FUTA_OPENING_WAGES_FIELD = "us_futa_taxable_wages_till_date"
-
-
-class SerializableRow(Protocol):
-	def as_dict(self) -> dict[str, object]: ...
-
-
-class RecalculableSalarySlip(FrappeSalarySlip, Protocol):
-	deductions: Iterable[SerializableRow]
-	employer_contributions: Iterable[SerializableRow]
-	total_deduction: float
-	base_total_deduction: float
-	net_pay: float
-	base_net_pay: float
-	rounded_total: float
-	base_rounded_total: float
-
-	def check_permission(self, permission_type: str) -> None: ...
-	def set_salary_structure_assignment(self) -> None: ...
-	def set_precision_for_component_amounts(self) -> None: ...
-	def set_net_pay(self) -> None: ...
 
 
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
