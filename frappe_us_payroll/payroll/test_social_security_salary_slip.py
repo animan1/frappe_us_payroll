@@ -24,6 +24,7 @@ from frappe_us_payroll.payroll.component_names import (
 	WA_PAID_LEAVE_EMPLOYER,
 	WA_UNEMPLOYMENT_EMPLOYER,
 )
+from frappe_us_payroll.payroll.salary_slip import recalculate
 
 
 class TestSocialSecuritySalarySlip(IntegrationTestCase):
@@ -182,6 +183,14 @@ class TestSocialSecuritySalarySlip(IntegrationTestCase):
 			self.assertEqual(contributions[WA_UNEMPLOYMENT_EMPLOYER], 12)
 			self.assertAlmostEqual(salary_slip.total_deduction, 90.37)
 			self.assertAlmostEqual(salary_slip.net_pay, 909.63)
+
+			salary_slip.earnings[0].amount = 2000
+			result = recalculate(salary_slip.as_dict())
+			recalculated_deductions = {row["salary_component"]: row["amount"] for row in result["deductions"]}
+			self.assertEqual(recalculated_deductions[SOCIAL_SECURITY_EMPLOYEE], 124)
+			self.assertEqual(recalculated_deductions[MEDICARE_EMPLOYEE], 29)
+			self.assertEqual(recalculated_deductions[WA_PAID_LEAVE_EMPLOYEE], 16.14)
+			self.assertEqual(recalculated_deductions[WA_CARES_EMPLOYEE], 11.6)
 		finally:
 			frappe.flags.country = previous_country
 			frappe.db.set_single_value(

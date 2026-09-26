@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import cast
+from typing import Any, cast
 
 import frappe
 
@@ -10,7 +10,7 @@ from frappe_us_payroll.payroll.dates import as_date
 from frappe_us_payroll.payroll.futa import apply_futa_liability
 from frappe_us_payroll.payroll.income_tax import apply_federal_income_tax_withholding
 from frappe_us_payroll.payroll.medicare import apply_medicare_liability
-from frappe_us_payroll.payroll.protocols import FrappeSalarySlip
+from frappe_us_payroll.payroll.protocols import FrappeSalarySlip, RecalculableSalarySlip
 from frappe_us_payroll.payroll.social_security import (
 	apply_social_security_withholding,
 	taxable_wages,
@@ -122,3 +122,30 @@ def _prior_taxable_wages(
 
 def _decimal(value: str | int | float | None) -> Decimal:
 	return Decimal(str(value or 0))
+
+
+@frappe.whitelist()
+def recalculate(salary_slip: str | dict[str, Any]) -> dict[str, object]:
+	"""Recalculate regional rows and totals for an unsaved Salary Slip from the UI."""
+	values = frappe.parse_json(salary_slip) if isinstance(salary_slip, str) else salary_slip
+	doc = cast(RecalculableSalarySlip, frappe.get_doc(cast(Any, values)))
+	doc.check_permission("write")
+	doc.set_salary_structure_assignment()
+	apply_us_payroll_deductions(doc)
+	doc.set_precision_for_component_amounts()
+	doc.set_net_pay()
+	return {
+		"deductions": [row.as_dict() for row in doc.deductions],
+		"employer_contributions": [row.as_dict() for row in doc.employer_contributions],
+		"us_social_security_taxable_wages": doc.us_social_security_taxable_wages,
+		"us_medicare_taxable_wages": doc.us_medicare_taxable_wages,
+		"us_futa_taxable_wages": doc.us_futa_taxable_wages,
+		"wa_paid_leave_taxable_wages": doc.wa_paid_leave_taxable_wages,
+		"wa_unemployment_taxable_wages": doc.wa_unemployment_taxable_wages,
+		"total_deduction": doc.total_deduction,
+		"base_total_deduction": doc.base_total_deduction,
+		"net_pay": doc.net_pay,
+		"base_net_pay": doc.base_net_pay,
+		"rounded_total": doc.rounded_total,
+		"base_rounded_total": doc.base_rounded_total,
+	}
