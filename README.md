@@ -54,9 +54,49 @@ Changes in the working tree are immediately visible through the bind mount. `mak
 `frappe-us-payroll.localhost`; it does not enable tests on `hrms.localhost`.
 
 Run `make e2e-demo` to build browser assets and create a persistent $1,000 draft Salary Slip on the isolated site.
-Open `http://frappe-us-payroll.localhost:8000`, sign in as `Administrator` with the default development password
+Open `https://frappe-us-payroll.localhost:8445`, sign in as `Administrator` with the default development password
 `Administrator`, and inspect the returned Salary Slip. Editing its Basic earning should refresh employee
 deductions, employer contributions, taxable wages, and net pay without saving first.
+
+### Trusted local HTTPS
+
+The nginx sidecar exposes the isolated development site at `https://frappe-us-payroll.localhost:8445`.
+Frappe's HTTP and Socket.IO ports remain available only inside the Compose network; they are not published to
+the host. The proxy uses the host's existing `mkcert` CA and always forwards
+`Host: frappe-us-payroll.localhost` to preserve Frappe's site routing.
+
+Install `mkcert`, trust its existing local CA on the host, create the test site, and start HTTPS:
+
+```console
+make https-trust
+make up
+make test-site
+make https-verify
+```
+
+`make https-verify` performs a normal certificate and hostname check; it does not use curl's insecure mode.
+The expected response is `{"message":"pong"}`. `make up`, `make wait`, and `make health` all use the secure
+endpoint. Use `make https-down` to stop only the TLS proxy. The generated
+leaf certificate, private key, and public CA copy are untracked under `.local-certs/`.
+
+For a client in another Compose project on Docker Desktop, mount the public CA certificate printed by
+`make https-ca-path`:
+
+```yaml
+services:
+  client:
+    volumes:
+      - /absolute/path/to/frappe_us_payroll/.local-certs/rootCA.pem:/certs/frappe-local-ca.pem:ro
+    environment:
+      SSL_CERT_FILE: /certs/frappe-local-ca.pem
+```
+
+The client can then use `https://host.docker.internal:8445`. The leaf certificate covers both that container
+hostname and the host-browser name, while nginx still forwards `Host: frappe-us-payroll.localhost` to Frappe.
+On Linux, add `host.docker.internal:host-gateway` under the client's `extra_hosts` when Docker does not provide
+that hostname automatically. Images that do not honor `SSL_CERT_FILE` should install the mounted public
+certificate using their operating system's CA update mechanism. Never mount the leaf private key into a client
+container.
 
 Run `make deps-lock` after intentionally changing dependencies, and commit the resulting `uv.lock`. Normal
 development and CI use `make deps` through the verification targets and refuse to change the lock.
