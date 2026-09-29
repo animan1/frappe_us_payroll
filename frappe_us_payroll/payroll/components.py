@@ -52,9 +52,11 @@ def set_component_amount(
 		salary_slip.get(component_table) or (),
 		getattr(salary_slip, "_evaluated_components", {}).get(component_table, ()),
 	)
+	found = False
 	for components in component_sources:
 		for component in components:
 			if component.salary_component == component_name:
+				found = True
 				component.amount = frappe_amount
 				component.default_amount = frappe_amount
 				# Evaluated structure rows must not reevaluate their original formula later.
@@ -62,7 +64,8 @@ def set_component_amount(
 					evaluated_component = cast(FormulaSalaryComponentRow, component)
 					evaluated_component.amount_based_on_formula = 0
 					evaluated_component.formula = None
-				return
+	if found:
+		return
 
 	raise MissingSalaryComponentError(component_table, component_name)
 

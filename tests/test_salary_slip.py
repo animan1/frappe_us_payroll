@@ -97,6 +97,22 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 		self.assertEqual(evaluated_component.amount_based_on_formula, 0)
 		self.assertIsNone(evaluated_component.formula)
 
+	def test_updates_loaded_and_evaluated_copies_of_same_component(self) -> None:
+		loaded_component = FakeDeduction(TEST_COMPONENT, 7.89, 7.89)
+		evaluated_component = FakeDeduction(TEST_COMPONENT, 0, 0, 1, "base * 0.10")
+		salary_slip = FakeSalarySlip(
+			[loaded_component],
+			{DEDUCTIONS: [evaluated_component]},
+		)
+
+		set_component_amount(salary_slip, DEDUCTIONS, TEST_COMPONENT, TEST_AMOUNT)
+
+		for component in (loaded_component, evaluated_component):
+			self.assertEqual(component.amount, 12.34)
+			self.assertEqual(component.default_amount, 12.34)
+			self.assertEqual(component.amount_based_on_formula, 0)
+			self.assertIsNone(component.formula)
+
 
 if __name__ == "__main__":
 	unittest.main()
