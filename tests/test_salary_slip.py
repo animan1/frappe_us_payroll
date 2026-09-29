@@ -81,6 +81,22 @@ class ApplyUSPayrollDeductionsTest(unittest.TestCase):
 		self.assertEqual(contribution.amount_based_on_formula, 0)
 		self.assertIsNone(contribution.formula)
 
+	def test_finds_evaluated_component_when_loaded_table_is_partial(self) -> None:
+		loaded_component = FakeDeduction("Other Component", 7.89, 7.89)
+		evaluated_component = FakeDeduction(TEST_COMPONENT, 0, 0, 1, "base * 0.10")
+		salary_slip = FakeSalarySlip(
+			[loaded_component],
+			{DEDUCTIONS: [evaluated_component]},
+		)
+
+		set_component_amount(salary_slip, DEDUCTIONS, TEST_COMPONENT, TEST_AMOUNT)
+
+		self.assertEqual(loaded_component.amount, 7.89)
+		self.assertEqual(evaluated_component.amount, 12.34)
+		self.assertEqual(evaluated_component.default_amount, 12.34)
+		self.assertEqual(evaluated_component.amount_based_on_formula, 0)
+		self.assertIsNone(evaluated_component.formula)
+
 
 if __name__ == "__main__":
 	unittest.main()
