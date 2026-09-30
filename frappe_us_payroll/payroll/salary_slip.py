@@ -30,6 +30,9 @@ FUTA_OPENING_WAGES_FIELD = "us_futa_taxable_wages_till_date"
 def apply_us_payroll_deductions(salary_slip: FrappeSalarySlip) -> None:
 	"""Apply supported US deductions through HRMS's regional extension point."""
 	try:
+		# HRMS normally applies Currency precision after this regional hook. Normalize
+		# first so binary-float artifacts never cross into Decimal tax calculations.
+		salary_slip.set_precision_for_component_amounts()
 		social_security_components = _taxable_components("us_social_security_taxable")
 		apply_social_security_withholding(
 			salary_slip,
