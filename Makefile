@@ -10,17 +10,24 @@ DB_ROOT_PASSWORD ?= 123
 SLIP ?=
 BENCH_DIR ?= /home/frappe/frappe-bench
 UV_CACHE_DIR ?= /tmp/frappe-us-payroll-uv-cache
+HTTPS_HOST ?= $(TEST_SITE)
+HTTPS_CONTAINER_HOST ?= host.docker.internal
+HTTPS_PORT ?= 8445
+HTTPS_CERT_DIR ?= $(CURDIR)/.local-certs
+HTTPS_CERT ?= $(HTTPS_CERT_DIR)/$(HTTPS_HOST).pem
+HTTPS_KEY ?= $(HTTPS_CERT_DIR)/$(HTTPS_HOST)-key.pem
+HTTPS_CA_CERT ?= $(HTTPS_CERT_DIR)/rootCA.pem
 COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
-COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
+COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) FRAPPE_US_PAYROLL_HTTPS_PORT=$(HTTPS_PORT) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps build-assets migrate e2e-demo recalculate-slip test-site test-site-reset enable-tests deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps build-assets migrate e2e-demo recalculate-slip test-site test-site-reset enable-tests https-cert https-trust https-up https-down https-logs https-verify https-ca-path deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-up: ## Create or start the Frappe development environment.
-	$(COMPOSE) up --detach
+up: https-cert ## Create or start the Frappe development environment with trusted HTTPS.
+	$(COMPOSE) --profile https up --detach
 
 down: ## Stop and remove the Frappe development containers.
 	$(COMPOSE) down
@@ -31,7 +38,10 @@ restart: ## Restart the Frappe container after app installation or dependency ch
 
 wait: ## Wait up to 60 seconds for the configured Frappe site to answer.
 	@for attempt in $$(seq 1 60); do \
-		if curl --fail --silent http://$(SITE):8000/api/method/ping >/dev/null; then \
+		if curl --fail --silent \
+			--cacert "$(HTTPS_CA_CERT)" \
+			--resolve "$(HTTPS_HOST):$(HTTPS_PORT):127.0.0.1" \
+			"https://$(HTTPS_HOST):$(HTTPS_PORT)/api/method/ping" >/dev/null; then \
 			echo "Frappe is ready"; \
 			exit 0; \
 		fi; \
@@ -40,9 +50,41 @@ wait: ## Wait up to 60 seconds for the configured Frappe site to answer.
 	echo "Frappe did not become ready within 60 seconds" >&2; \
 	exit 1
 
-health: ## Verify that the configured Frappe site answers HTTP requests.
-	curl --fail --silent --show-error http://$(SITE):8000/api/method/ping
+health: https-verify ## Verify that the configured Frappe site answers trusted HTTPS requests.
+
+https-cert: ## Generate the local HTTPS certificate and export its public mkcert CA certificate.
+	@command -v mkcert >/dev/null || (echo "mkcert is required: https://github.com/FiloSottile/mkcert" >&2; exit 1)
+	@mkdir -p "$(HTTPS_CERT_DIR)"
+	@if test ! -f "$(HTTPS_CERT)" || test ! -f "$(HTTPS_KEY)" \
+		|| ! openssl x509 -in "$(HTTPS_CERT)" -noout -checkhost "$(HTTPS_HOST)" >/dev/null \
+		|| ! openssl x509 -in "$(HTTPS_CERT)" -noout -checkhost "$(HTTPS_CONTAINER_HOST)" >/dev/null; then \
+		mkcert -cert-file "$(HTTPS_CERT)" -key-file "$(HTTPS_KEY)" \
+			"$(HTTPS_HOST)" "$(HTTPS_CONTAINER_HOST)"; \
+	fi
+	@cp "$$(mkcert -CAROOT)/rootCA.pem" "$(HTTPS_CA_CERT)"
+	@chmod 644 "$(HTTPS_CERT)" "$(HTTPS_CA_CERT)"
+	@chmod 600 "$(HTTPS_KEY)"
+
+https-trust: ## Install the existing mkcert CA in the host browser/system trust store.
+	mkcert -install
+
+https-up: up ## Compatibility alias for starting the HTTPS development environment.
+
+https-down: ## Stop the local HTTPS reverse proxy while leaving Frappe running.
+	$(COMPOSE) --profile https stop tls-proxy
+
+https-logs: ## Follow local HTTPS reverse-proxy logs.
+	$(COMPOSE) --profile https logs --tail 100 --follow tls-proxy
+
+https-verify: https-cert ## Verify local HTTPS with hostname and CA validation enabled.
+	curl --fail --silent --show-error \
+		--cacert "$(HTTPS_CA_CERT)" \
+		--resolve "$(HTTPS_HOST):$(HTTPS_PORT):127.0.0.1" \
+		"https://$(HTTPS_HOST):$(HTTPS_PORT)/api/method/ping"
 	@printf "\n"
+
+https-ca-path: https-cert ## Print the public local CA certificate path for other containers.
+	@printf '%s\n' "$(HTTPS_CA_CERT)"
 
 ps: ## Show the development containers and their current status.
 	$(COMPOSE) ps --all
