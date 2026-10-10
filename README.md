@@ -79,24 +79,36 @@ The expected response is `{"message":"pong"}`. `make up`, `make wait`, and `make
 endpoint. Use `make https-down` to stop only the TLS proxy. The generated
 leaf certificate, private key, and public CA copy are untracked under `.local-certs/`.
 
+`make up` also attaches the TLS proxy to the external `local-integrations`
+Docker network with `frappe-us-payroll.localhost` as its network alias. Other
+local application containers can join that network and use the same URL as the
+host without special DNS or connection-routing code. Set
+`LOCAL_INTEGRATION_NETWORK` consistently in both projects to use another name.
+
 For a client in another Compose project on Docker Desktop, mount the public CA certificate printed by
 `make https-ca-path`:
 
 ```yaml
 services:
   client:
+    networks:
+      - integrations
     volumes:
       - /absolute/path/to/frappe_us_payroll/.local-certs/rootCA.pem:/certs/frappe-local-ca.pem:ro
     environment:
       SSL_CERT_FILE: /certs/frappe-local-ca.pem
+
+networks:
+  integrations:
+    external: true
+    name: local-integrations
 ```
 
-The client can then use `https://host.docker.internal:8445`. The leaf certificate covers both that container
-hostname and the host-browser name, while nginx still forwards `Host: frappe-us-payroll.localhost` to Frappe.
-On Linux, add `host.docker.internal:host-gateway` under the client's `extra_hosts` when Docker does not provide
-that hostname automatically. Images that do not honor `SSL_CERT_FILE` should install the mounted public
-certificate using their operating system's CA update mechanism. Never mount the leaf private key into a client
-container.
+The client can then use `https://frappe-us-payroll.localhost:8445`, preserving
+the same DNS and TLS identity used by the host browser. Images that do not
+honor `SSL_CERT_FILE` should install the mounted public certificate using their
+operating system's CA update mechanism. Never mount the leaf private key into
+a client container.
 
 Run `make deps-lock` after intentionally changing dependencies, and commit the resulting `uv.lock`. Normal
 development and CI use `make deps` through the verification targets and refuse to change the lock.
