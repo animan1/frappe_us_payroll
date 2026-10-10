@@ -24,6 +24,16 @@ services:
         source: ${FRAPPE_US_PAYROLL_DIR}/.local-certs
         target: /etc/nginx/tls
         read_only: true
+    networks:
+      default:
+      integrations:
+        aliases:
+          - frappe-us-payroll.localhost
 
 volumes:
   frappe-home:
+
+networks:
+  integrations:
+    external: true
+    name: ${LOCAL_INTEGRATION_NETWORK:-local-integrations}

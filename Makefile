@@ -11,23 +11,27 @@ SLIP ?=
 BENCH_DIR ?= /home/frappe/frappe-bench
 UV_CACHE_DIR ?= /tmp/frappe-us-payroll-uv-cache
 HTTPS_HOST ?= $(TEST_SITE)
-HTTPS_CONTAINER_HOST ?= host.docker.internal
 HTTPS_PORT ?= 8445
 HTTPS_CERT_DIR ?= $(CURDIR)/.local-certs
 HTTPS_CERT ?= $(HTTPS_CERT_DIR)/$(HTTPS_HOST).pem
 HTTPS_KEY ?= $(HTTPS_CERT_DIR)/$(HTTPS_HOST)-key.pem
 HTTPS_CA_CERT ?= $(HTTPS_CERT_DIR)/rootCA.pem
+LOCAL_INTEGRATION_NETWORK ?= local-integrations
 COMPOSE_PROJECT ?= docker
 HRMS_COMPOSE_FILE ?= ../hrms/docker/docker-compose.yml
-COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) FRAPPE_US_PAYROLL_HTTPS_PORT=$(HTTPS_PORT) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
+COMPOSE := FRAPPE_US_PAYROLL_DIR=$(CURDIR) FRAPPE_US_PAYROLL_HTTPS_PORT=$(HTTPS_PORT) LOCAL_INTEGRATION_NETWORK=$(LOCAL_INTEGRATION_NETWORK) docker compose --project-name $(COMPOSE_PROJECT) --file $(HRMS_COMPOSE_FILE) --file compose.yaml
 
-.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps build-assets migrate e2e-demo recalculate-slip test-site test-site-reset enable-tests https-cert https-trust https-up https-down https-logs https-verify https-ca-path deps-lock deps unit test format format-check lint typecheck check verify
+.PHONY: help up down restart wait health ps logs logs-tail shell apps versions link register install bench-deps build-assets migrate e2e-demo recalculate-slip test-site test-site-reset enable-tests https-cert https-trust https-up https-down https-logs https-verify https-ca-path integration-network deps-lock deps unit test format format-check lint typecheck check verify
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-up: https-cert ## Create or start the Frappe development environment with trusted HTTPS.
+up: https-cert integration-network ## Create or start the Frappe development environment with trusted HTTPS.
 	$(COMPOSE) --profile https up --detach
+
+integration-network: ## Create the shared network used by local integration containers.
+	@docker network inspect "$(LOCAL_INTEGRATION_NETWORK)" >/dev/null 2>&1 || \
+		docker network create "$(LOCAL_INTEGRATION_NETWORK)" >/dev/null
 
 down: ## Stop and remove the Frappe development containers.
 	$(COMPOSE) down
@@ -56,10 +60,9 @@ https-cert: ## Generate the local HTTPS certificate and export its public mkcert
 	@command -v mkcert >/dev/null || (echo "mkcert is required: https://github.com/FiloSottile/mkcert" >&2; exit 1)
 	@mkdir -p "$(HTTPS_CERT_DIR)"
 	@if test ! -f "$(HTTPS_CERT)" || test ! -f "$(HTTPS_KEY)" \
-		|| ! openssl x509 -in "$(HTTPS_CERT)" -noout -checkhost "$(HTTPS_HOST)" >/dev/null \
-		|| ! openssl x509 -in "$(HTTPS_CERT)" -noout -checkhost "$(HTTPS_CONTAINER_HOST)" >/dev/null; then \
+		|| ! openssl x509 -in "$(HTTPS_CERT)" -noout -checkhost "$(HTTPS_HOST)" >/dev/null; then \
 		mkcert -cert-file "$(HTTPS_CERT)" -key-file "$(HTTPS_KEY)" \
-			"$(HTTPS_HOST)" "$(HTTPS_CONTAINER_HOST)"; \
+			"$(HTTPS_HOST)"; \
 	fi
 	@cp "$$(mkcert -CAROOT)/rootCA.pem" "$(HTTPS_CA_CERT)"
 	@chmod 644 "$(HTTPS_CERT)" "$(HTTPS_CA_CERT)"
