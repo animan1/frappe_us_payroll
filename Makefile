@@ -1,6 +1,13 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 export PRODUCTION_ENV PRODUCTION_PROJECT
+.PHONY: production-backup migration-check-database migration-backup
+production-backup: ## Capture a private DB/files/config backup of the independent runtime.
+	python3 -B deploy/runtime.py backup
+migration-check-database: ## Read-only laptop source DB existence check using existing dev administrator access.
+	@$(COMPOSE) config --format json | python3 -B deploy/source_database_check.py
+migration-backup: ## Capture a private laptop rehearsal snapshot without changing source grants.
+	@$(COMPOSE) config --format json | python3 -B deploy/source_backup.py
 .PHONY: production-initialize production-start production-apps production-logs production-rehearsal-delete production-smoke
 production-initialize: ## Initialize an empty rehearsal site; refuses any existing site.
 production-start: ## Start the application only in the isolated rehearsal project.

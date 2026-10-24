@@ -75,6 +75,13 @@ def main():
 	]
 	if project.endswith("-rehearsal"):
 		command.extend(["--file", "deploy/rehearsal.yaml"])
+	if action == "backup":
+		environment["BACKUP_SITE"] = values["FRAPPE_SITE"]
+		config = subprocess.check_output([*command, "config", "--format", "json"], env=environment)
+		subprocess.run(
+			[sys.executable, "-B", "deploy/source_backup.py"], input=config, env=environment, check=True
+		)
+		return
 	operations = {
 		"logs": ["logs", "--tail", "30", "backend", "frontend", "websocket"],
 		"delete-rehearsal": ["down", "--volumes", "--remove-orphans"],
