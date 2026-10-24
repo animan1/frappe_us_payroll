@@ -1,18 +1,44 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-export PRODUCTION_ENV
+export PRODUCTION_ENV PRODUCTION_PROJECT
+export RESTORE_BACKUP_DIR
+.PHONY: production-build
+production-build: ## Build a data-free custom production image from captured source commits.
+	python3 -B deploy/build.py
+.PHONY: production-rehearsal-inputs
+production-rehearsal-inputs: ## Generate private empty-site rehearsal inputs using cached image digests.
+	python3 -B deploy/rehearsal_inputs.py
 .PHONY: migration-inspect
 migration-inspect: ## Read source app revisions and backup filenames without printing secrets or records.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe python - < deploy/source_inventory.py
+.PHONY: migration-check-database
+migration-check-database: ## Read-only source database existence check using existing dev DB admin access.
+	@$(COMPOSE) config --format json | python3 -B deploy/source_database_check.py
+.PHONY: migration-backup
+migration-backup: ## Create a private DB/files/config rehearsal backup without altering source grants.
+	@$(COMPOSE) config --format json | python3 -B deploy/source_backup.py
 .PHONY: production-test
 production-test: ## Check production input validation without application data.
 	python3 -B -m unittest discover -s tests -p test_runtime_config.py -v
-.PHONY: production-validate production-status production-stop production-pull
+.PHONY: production-validate production-status production-stop production-pull production-initialize
+production-initialize: ## Create an EMPTY destination site; refuses any existing site.
+production-start: ## Start frontend/backend/socketio in the isolated rehearsal only.
+production-restore: ## Restore a private snapshot into the freshly initialized rehearsal only.
+production-backup: ## Capture a private backup of the selected independent runtime.
+production-apps: ## Verify database-backed installed-app inventory in the selected runtime.
+production-logs: ## Inspect recent logs from the selected independent runtime.
+.PHONY: production-rehearsal-delete
+production-rehearsal-delete: ## DELETE only the isolated rehearsal project and ALL its data.
+	python3 -B deploy/runtime.py delete-rehearsal
+.PHONY: production-start production-smoke
+production-smoke: ## Check the loopback frontend's login page and Framework endpoint.
+	curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 --max-time 5 -o /dev/null http://127.0.0.1:18081/login
+	curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18081/api/method/ping
 production-validate: ## Validate immutable independent production runtime inputs (no start).
 production-status: ## Inspect the independent production Compose project.
 production-stop: ## Stop the independent production project, preserving all data.
 production-pull: ## Pull the exact production image digests without starting services.
-production-validate production-status production-stop production-pull:
+production-validate production-status production-stop production-pull production-initialize production-start production-restore production-backup production-apps production-logs:
 	python3 -B deploy/runtime.py $(patsubst production-%,%,$@)
 
 APP := frappe_us_payroll
