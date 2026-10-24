@@ -1,5 +1,5 @@
 [project]
-name = "frappe-us-payroll"
+name = "frappe_us_payroll"
 authors = [
     { name = "Frappe US Payroll contributors" },
 ]

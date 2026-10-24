@@ -1,5 +1,36 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
+export PRODUCTION_ENV PRODUCTION_PROJECT
+.PHONY: production-initialize production-start production-apps production-logs production-rehearsal-delete production-smoke
+production-initialize: ## Initialize an empty rehearsal site; refuses any existing site.
+production-start: ## Start the application only in the isolated rehearsal project.
+production-apps: ## List installed applications using the destination database.
+production-logs: ## Show recent frontend/backend/realtime logs.
+production-initialize production-start production-apps production-logs:
+	python3 -B deploy/runtime.py $(patsubst production-%,%,$@)
+production-rehearsal-delete: ## DELETE the isolated rehearsal and ALL its data; never production.
+	python3 -B deploy/runtime.py delete-rehearsal
+production-smoke: ## Check the loopback login page and ping endpoint.
+	curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 --max-time 5 -o /dev/null http://127.0.0.1:18081/login
+	curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18081/api/method/ping
+.PHONY: production-build production-rehearsal-inputs
+production-build: ## Build a data-free production image from captured source commits.
+	python3 -B deploy/build.py
+production-rehearsal-inputs: ## Generate private empty-site rehearsal inputs from cached image digests.
+	python3 -B deploy/rehearsal_inputs.py
+.PHONY: migration-inspect
+migration-inspect: ## Read source app revisions and backup filenames without printing secrets or records.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe python - < deploy/source_inventory.py
+.PHONY: production-test
+production-test: ## Check production input validation without application data.
+	python3 -B -m unittest discover -s tests -p test_runtime_config.py -v
+.PHONY: production-validate production-status production-stop production-pull
+production-validate: ## Validate immutable independent production runtime inputs (no start).
+production-status: ## Inspect the independent production Compose project.
+production-stop: ## Stop the independent production project, preserving all data.
+production-pull: ## Pull the exact production image digests without starting services.
+production-validate production-status production-stop production-pull:
+	python3 -B deploy/runtime.py $(patsubst production-%,%,$@)
 
 APP := frappe_us_payroll
 SITE ?= hrms.localhost

@@ -1,0 +1,95 @@
+# Tenant-owned runtime. Supply a built, immutable custom Frappe image; never bench:latest.
+x-frappe: &frappe
+  image: ${FRAPPE_IMAGE:?Set the custom application image by digest}
+  restart: unless-stopped
+  working_dir: /home/frappe/frappe-bench
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+    - logs:/home/frappe/frappe-bench/logs
+    - ./mariadb-client.cnf:/etc/mysql/conf.d/tenant-client.cnf:ro
+  networks: [private]
+
+services:
+  initialize:
+    <<: *frappe
+    restart: 'no'
+    profiles: [maintenance]
+    command: [env/bin/python, /opt/tenant/initialize.py]
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+      - logs:/home/frappe/frappe-bench/logs
+      - ./initialize.py:/opt/tenant/initialize.py:ro
+      - ./mariadb-client.cnf:/etc/mysql/conf.d/tenant-client.cnf:ro
+    environment:
+      FRAPPE_SITE: ${FRAPPE_SITE}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      FRAPPE_ADMIN_PASSWORD: ${FRAPPE_ADMIN_PASSWORD:?Private initializer password required}
+    depends_on: [db, redis-cache, redis-queue]
+  db:
+    image: ${MARIADB_IMAGE:?Pin a source-compatible MariaDB image by digest}
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Required private value}
+    command: [--character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci]
+    volumes:
+      - database:/var/lib/mysql
+    networks: [private]
+  redis-cache:
+    image: ${REDIS_IMAGE:?Pin Redis by digest}
+    restart: unless-stopped
+    networks: [private]
+  redis-queue:
+    image: ${REDIS_IMAGE:?Pin Redis by digest}
+    restart: unless-stopped
+    command: [redis-server, --appendonly, 'yes']
+    volumes:
+      - queue:/data
+    networks: [private]
+  backend:
+    <<: *frappe
+    command: [start.sh]
+    environment:
+      GUNICORN_WORKERS: '2'
+      GUNICORN_THREADS: '2'
+      GUNICORN_TIMEOUT: '120'
+    depends_on: [db, redis-cache, redis-queue]
+  websocket:
+    <<: *frappe
+    command: [node, /home/frappe/frappe-bench/apps/frappe/socketio.js]
+    depends_on: [redis-queue]
+  worker:
+    <<: *frappe
+    profiles: [live]
+    command: [bench, worker, --queue, short,default,long]
+    depends_on: [db, redis-cache, redis-queue]
+  scheduler:
+    <<: *frappe
+    command: [bench, schedule]
+    profiles: [live]
+    depends_on: [db, redis-cache, redis-queue]
+  frontend:
+    <<: *frappe
+    networks: [private, edge]
+    command: [nginx-entrypoint.sh]
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      NGINX_LISTEN_PORT: '8080'
+      FRAPPE_SITE_NAME_HEADER: ${FRAPPE_SITE:?Select the restored site}
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: 'off'
+      PROXY_READ_TIMEOUT: '120'
+      CLIENT_MAX_BODY_SIZE: 50m
+    ports:
+      - '127.0.0.1:18081:8080'
+    depends_on: [backend, websocket]
+
+networks:
+  private:
+  edge:
+volumes:
+  sites:
+  logs:
+  database:
+  queue:
