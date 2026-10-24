@@ -16,13 +16,14 @@ Uncommitted source changes are not included; reconcile them before a real-data m
 Site initialization and backup/restore are separate dependent slices.
 
 This is a tenant-owned Compose project, separate from the laptop development bench
-and from shared Caddy. It is not yet a deployment or restore command. Activation is
-intentionally unavailable until immutable custom image packaging and backup restore
-have been rehearsed. Never use the development bench image or default passwords.
+and shared Caddy. Follow [empty-site rehearsal](rehearsal.md), [backup](backup.md),
+then [restore](restore.md). Production activation remains gated until the real-data
+restore and source customizations are accepted. Never use the development bench image
+or default passwords.
 
 Create a private mode-0600 env file outside Git and set `PRODUCTION_ENV` to its path.
 Required inputs are `FRAPPE_IMAGE`, `MARIADB_IMAGE`, `REDIS_IMAGE` (all digest-pinned),
-`FRAPPE_SITE` (the restored site's name), and a newly generated
+`FRAPPE_SITE` (the restored site's name), `FRAPPE_ADMIN_PASSWORD`, and a newly generated
 `MARIADB_ROOT_PASSWORD` of at least 24 random letters/digits/underscores/hyphens.
 This alphabet avoids Compose interpolation of credential characters. Use plain unquoted env values;
 do not paste credentials into shell arguments or review evidence.
@@ -36,7 +37,8 @@ make production-status
 
 Validation prints no expanded configuration. Pull downloads images without starting
 services. Status must not affect development containers. `make production-stop` stops
-only `cranescastle-frappe` and preserves volumes. There is no volume-deletion target.
+only the selected project and preserves volumes. The separately named
+`production-rehearsal-delete` deletes only the isolated rehearsal and all its data.
 Only the frontend publishes a host port: `127.0.0.1:18081`. Caddy owns public TLS.
 Database, Redis, backend and Socket.IO stay within this tenant's network.
 

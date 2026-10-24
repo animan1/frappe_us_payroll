@@ -1,6 +1,10 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 export PRODUCTION_ENV PRODUCTION_PROJECT
+export RESTORE_BACKUP_DIR
+.PHONY: production-restore
+production-restore: ## Restore a checksummed snapshot only over a fresh empty rehearsal site.
+	python3 -B deploy/runtime.py restore
 .PHONY: production-backup migration-check-database migration-backup
 production-backup: ## Capture a private DB/files/config backup of the independent runtime.
 	python3 -B deploy/runtime.py backup

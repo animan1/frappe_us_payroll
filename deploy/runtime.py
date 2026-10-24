@@ -91,12 +91,18 @@ def main():
 		"stop": ["stop"],
 		"pull": ["pull"],
 		"initialize": ["run", "--rm", "initialize"],
+		"restore": ["run", "--rm", "restore"],
 		"start": ["up", "-d", "backend", "websocket", "frontend"],
 	}
 	if action not in operations:
 		raise ValueError("Unknown runtime operation")
-	if action in ("initialize", "start") and project != "cranescastle-frappe-rehearsal":
+	if action in ("initialize", "start", "restore") and project != "cranescastle-frappe-rehearsal":
 		raise ValueError("Initialization/start currently restricted to the isolated rehearsal project")
+	if action == "restore":
+		backup = Path(os.environ.get("RESTORE_BACKUP_DIR") or ".missing-backup").resolve()
+		if not (backup / "manifest.json").is_file():
+			raise ValueError("RESTORE_BACKUP_DIR must contain the captured backup manifest")
+		environment["RESTORE_BACKUP_DIR"] = str(backup)
 	subprocess.run([*command, *operations[action]], env=environment, check=True)
 
 
