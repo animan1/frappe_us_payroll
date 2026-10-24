@@ -22,7 +22,10 @@ if set(manifest["files"]) != {"database.sql.gz", "site-files.tar.gz"}:
 for name, evidence in manifest["files"].items():
 	path = backup / name
 	with path.open("rb") as source:
-		if hashlib.file_digest(source, "sha256").hexdigest() != evidence["sha256"]:
+		digest = hashlib.sha256()
+		while chunk := source.read(1024 * 1024):
+			digest.update(chunk)
+		if digest.hexdigest() != evidence["sha256"]:
 			raise SystemExit("Backup checksum mismatch")
 with tarfile.open(backup / "site-files.tar.gz") as archive:
 	members = archive.getmembers()
