@@ -1,0 +1,72 @@
+# Tenant-owned runtime. Supply a built, immutable custom Frappe image; never bench:latest.
+x-frappe: &frappe
+  image: ${FRAPPE_IMAGE:?Set the custom application image by digest}
+  restart: unless-stopped
+  working_dir: /home/frappe/frappe-bench
+  volumes:
+    - sites:/home/frappe/frappe-bench/sites
+    - logs:/home/frappe/frappe-bench/logs
+  networks: [private]
+
+services:
+  db:
+    image: ${MARIADB_IMAGE:?Pin a source-compatible MariaDB image by digest}
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?Required private value}
+    command: [--character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci]
+    volumes:
+      - database:/var/lib/mysql
+    networks: [private]
+  redis-cache:
+    image: ${REDIS_IMAGE:?Pin Redis by digest}
+    restart: unless-stopped
+    networks: [private]
+  redis-queue:
+    image: ${REDIS_IMAGE:?Pin Redis by digest}
+    restart: unless-stopped
+    command: [redis-server, --appendonly, 'yes']
+    volumes:
+      - queue:/data
+    networks: [private]
+  backend:
+    <<: *frappe
+    command: [env/bin/gunicorn, --bind=0.0.0.0:8000, --workers=2, --threads=2, --worker-class=gthread, --worker-tmp-dir=/dev/shm, --timeout=120, frappe.app:application]
+    depends_on: [db, redis-cache, redis-queue]
+  websocket:
+    <<: *frappe
+    command: [node, /home/frappe/frappe-bench/apps/frappe/socketio.js]
+    depends_on: [redis-queue]
+  worker:
+    <<: *frappe
+    profiles: [live]
+    command: [bench, worker, --queue, short,default,long]
+    depends_on: [db, redis-cache, redis-queue]
+  scheduler:
+    <<: *frappe
+    command: [bench, schedule]
+    profiles: [live]
+    depends_on: [db, redis-cache, redis-queue]
+  frontend:
+    <<: *frappe
+    command: [nginx-entrypoint.sh]
+    environment:
+      BACKEND: backend:8000
+      SOCKETIO: websocket:9000
+      FRAPPE_SITE_NAME_HEADER: ${FRAPPE_SITE:?Select the restored site}
+      UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
+      UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
+      UPSTREAM_REAL_IP_RECURSIVE: 'off'
+      PROXY_READ_TIMEOUT: '120'
+      CLIENT_MAX_BODY_SIZE: 50m
+    ports:
+      - '127.0.0.1:18081:8080'
+    depends_on: [backend, websocket]
+
+networks:
+  private:
+volumes:
+  sites:
+  logs:
+  database:
+  queue:
