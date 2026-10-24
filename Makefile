@@ -1,6 +1,9 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 export PRODUCTION_ENV
+.PHONY: migration-inspect
+migration-inspect: ## Read source app revisions and backup filenames without printing secrets or records.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe python - < deploy/source_inventory.py
 .PHONY: production-test
 production-test: ## Check production input validation without application data.
 	python3 -B -m unittest discover -s tests -p test_runtime_config.py -v

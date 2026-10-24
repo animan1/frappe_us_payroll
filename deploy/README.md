@@ -27,6 +27,18 @@ Database, Redis, backend and Socket.IO stay within this tenant's network.
 
 ## Restore rehearsal contract
 
+Inspect the existing development source without printing configuration or records:
+
+```sh
+make migration-inspect
+```
+
+This lists source commit IDs, dirty app paths, and backup filenames/sizes. It never
+starts or recreates containers. Stop if app changes are not represented in the planned
+image: database/file backups do not include uncommitted Python code. Preserve those
+changes privately and reconcile them with the owner before claiming visual/functional
+parity. Never reset the source apps to make this check pass.
+
 Restore from a Frappe backup, not by copying live Docker volumes. Include the matching
 database dump, public/private file archives, and securely retained site encryption key.
 Use the exact source app revisions and source-compatible database/runtime images first.
@@ -50,4 +62,7 @@ on port 8445; production is `frappe.cranescastlebeer.com`. The selected source c
 fails database authentication in `make apps SITE=frappe-us-payroll.localhost` while
 the health ping succeeds. A known-good existing backup can unblock the restore
 rehearsal independently of that live connection. No backup was selected or restored
-by this preparation slice.
+by this preparation slice. The initial inventory found no backups in the selected
+site directory and uncommitted Employee changes in ERPNext plus Salary Register
+changes in HRMS. Their contents were not copied into this repository. Restoring a
+known-good separately stored backup is preferred to repairing source database grants.
