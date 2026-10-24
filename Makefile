@@ -1,5 +1,24 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
+export PRODUCTION_ENV
+.PHONY: production-build production-rehearsal-inputs
+production-build: ## Build a data-free production image from captured source commits.
+	python3 -B deploy/build.py
+production-rehearsal-inputs: ## Generate private empty-site rehearsal inputs from cached image digests.
+	python3 -B deploy/rehearsal_inputs.py
+.PHONY: migration-inspect
+migration-inspect: ## Read source app revisions and backup filenames without printing secrets or records.
+	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe python - < deploy/source_inventory.py
+.PHONY: production-test
+production-test: ## Check production input validation without application data.
+	python3 -B -m unittest discover -s tests -p test_runtime_config.py -v
+.PHONY: production-validate production-status production-stop production-pull
+production-validate: ## Validate immutable independent production runtime inputs (no start).
+production-status: ## Inspect the independent production Compose project.
+production-stop: ## Stop the independent production project, preserving all data.
+production-pull: ## Pull the exact production image digests without starting services.
+production-validate production-status production-stop production-pull:
+	python3 -B deploy/runtime.py $(patsubst production-%,%,$@)
 
 APP := frappe_us_payroll
 SITE ?= hrms.localhost
