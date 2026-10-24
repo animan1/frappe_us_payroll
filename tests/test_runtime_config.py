@@ -18,6 +18,7 @@ class RuntimeConfigurationTests(unittest.TestCase):
 				for key in ("FRAPPE_IMAGE", "MARIADB_IMAGE", "REDIS_IMAGE")
 			)
 			text += "FRAPPE_SITE=restored.example.test\nMARIADB_ROOT_PASSWORD=" + "x" * 32 + "\n"
+			text += "FRAPPE_ADMIN_PASSWORD=" + "y" * 32 + "\n"
 			path.write_text(text)
 			path.chmod(0o644)
 			with self.assertRaisesRegex(ValueError, "0600"):

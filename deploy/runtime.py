@@ -19,20 +19,31 @@ def configuration(path):
 		if key in values:
 			raise ValueError("Duplicate configuration key: " + key)
 		values[key] = value
+	if set(values) != {
+		"FRAPPE_IMAGE",
+		"MARIADB_IMAGE",
+		"REDIS_IMAGE",
+		"FRAPPE_SITE",
+		"MARIADB_ROOT_PASSWORD",
+		"FRAPPE_ADMIN_PASSWORD",
+	}:
+		raise ValueError("Supply only the six documented runtime inputs")
 	for key in ("FRAPPE_IMAGE", "MARIADB_IMAGE", "REDIS_IMAGE"):
-		if not re.fullmatch(r"[a-z0-9./:_-]+@sha256:[0-9a-f]{64}", values.get(key, "")):
+		if not re.fullmatch(r"(?:[a-z0-9./:_-]+@)?sha256:[0-9a-f]{64}", values.get(key, "")):
 			raise ValueError(key + " must identify an immutable image digest")
 	if not re.fullmatch(r"[a-z0-9.-]+", values.get("FRAPPE_SITE", "")):
 		raise ValueError("Invalid restored site name")
 	if not re.fullmatch(r"[A-Za-z0-9_-]{24,}", values.get("MARIADB_ROOT_PASSWORD", "")):
 		raise ValueError("Supply a private random database password: 24+ letters/digits/_/-")
+	if not re.fullmatch(r"[A-Za-z0-9_-]{24,}", values.get("FRAPPE_ADMIN_PASSWORD", "")):
+		raise ValueError("Supply a private random administrator password: 24+ letters/digits/_/-")
 	return values
 
 
 def main():
 	action = sys.argv[1]
 	path = Path(os.environ.get("PRODUCTION_ENV") or ".local/production.env").resolve()
-	configuration(path)
+	values = configuration(path)
 	# Prevent ambient workstation variables from overriding the reviewed private inputs.
 	environment = dict(os.environ)
 	for key in (
@@ -41,24 +52,44 @@ def main():
 		"REDIS_IMAGE",
 		"FRAPPE_SITE",
 		"MARIADB_ROOT_PASSWORD",
+		"FRAPPE_ADMIN_PASSWORD",
 		"COMPOSE_PROFILES",
 		"COMPOSE_FILE",
 		"COMPOSE_PROJECT_NAME",
 	):
 		environment.pop(key, None)
+	project = os.environ.get("PRODUCTION_PROJECT") or "cranescastle-frappe"
+	if action == "delete-rehearsal":
+		project = "cranescastle-frappe-rehearsal"
+	if project not in ("cranescastle-frappe", "cranescastle-frappe-rehearsal"):
+		raise ValueError("Use the dedicated production or rehearsal project only")
 	command = [
 		"docker",
 		"compose",
 		"--project-name",
-		"cranescastle-frappe",
+		project,
 		"--env-file",
 		str(path),
 		"--file",
 		"deploy/compose.yaml",
 	]
-	operations = {"validate": ["config", "--quiet"], "status": ["ps"], "stop": ["stop"], "pull": ["pull"]}
+	if project.endswith("-rehearsal"):
+		command.extend(["--file", "deploy/rehearsal.yaml"])
+	operations = {
+		"logs": ["logs", "--tail", "30", "backend", "frontend", "websocket"],
+		"delete-rehearsal": ["down", "--volumes", "--remove-orphans"],
+		"apps": ["exec", "--no-TTY", "backend", "bench", "--site", values["FRAPPE_SITE"], "list-apps"],
+		"validate": ["config", "--quiet"],
+		"status": ["ps"],
+		"stop": ["stop"],
+		"pull": ["pull"],
+		"initialize": ["run", "--rm", "initialize"],
+		"start": ["up", "-d", "backend", "websocket", "frontend"],
+	}
 	if action not in operations:
-		raise ValueError("Runtime activation is unavailable until configuration/restore rehearsal passes")
+		raise ValueError("Unknown runtime operation")
+	if action in ("initialize", "start") and project != "cranescastle-frappe-rehearsal":
+		raise ValueError("Initialization/start currently restricted to the isolated rehearsal project")
 	subprocess.run([*command, *operations[action]], env=environment, check=True)
 
 

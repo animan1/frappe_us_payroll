@@ -1,5 +1,7 @@
 # Independent production runtime (preparation)
 
+For a data-free running site, follow the [empty-site exercise](rehearsal.md).
+
 Build the custom image without reading any site data, then generate private rehearsal
 inputs from its immutable image identity and cached database/Redis digests:
 

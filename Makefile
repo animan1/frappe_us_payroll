@@ -1,6 +1,18 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-export PRODUCTION_ENV
+export PRODUCTION_ENV PRODUCTION_PROJECT
+.PHONY: production-initialize production-start production-apps production-logs production-rehearsal-delete production-smoke
+production-initialize: ## Initialize an empty rehearsal site; refuses any existing site.
+production-start: ## Start the application only in the isolated rehearsal project.
+production-apps: ## List installed applications using the destination database.
+production-logs: ## Show recent frontend/backend/realtime logs.
+production-initialize production-start production-apps production-logs:
+	python3 -B deploy/runtime.py $(patsubst production-%,%,$@)
+production-rehearsal-delete: ## DELETE the isolated rehearsal and ALL its data; never production.
+	python3 -B deploy/runtime.py delete-rehearsal
+production-smoke: ## Check the loopback login page and ping endpoint.
+	curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 --max-time 5 -o /dev/null http://127.0.0.1:18081/login
+	curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18081/api/method/ping
 .PHONY: production-build production-rehearsal-inputs
 production-build: ## Build a data-free production image from captured source commits.
 	python3 -B deploy/build.py
