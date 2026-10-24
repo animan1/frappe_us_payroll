@@ -1,0 +1,4 @@
+# Same application services; rehearsal must not contact external integrations.
+networks:
+  private:
+    internal: true
