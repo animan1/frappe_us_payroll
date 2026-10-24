@@ -37,10 +37,6 @@ reason for this boundary.
 
 ## Development
 
-The independent shared-host runtime and backup-based migration rehearsal are documented
-in [production runtime](deploy/README.md). They do not reuse development volumes or
-publish database/Redis ports. Real-data migration is a separately approved step.
-
 The local development environment extends HRMS's Docker Compose configuration. The repository is bind-mounted
 into the Frappe container, and a named volume preserves the bench. Run `make help` for the supported developer
 operations. In particular:
