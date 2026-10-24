@@ -1,4 +1,0 @@
-# MariaDB is reachable only within this tenant's private Docker network.
-# Newer CLI clients otherwise require TLS against the source-compatible 10.8 server.
-[client]
-skip-ssl

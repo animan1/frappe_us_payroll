@@ -6,47 +6,9 @@ x-frappe: &frappe
   volumes:
     - sites:/home/frappe/frappe-bench/sites
     - logs:/home/frappe/frappe-bench/logs
-    - ./mariadb-client.cnf:/etc/mysql/conf.d/tenant-client.cnf:ro
   networks: [private]
 
 services:
-  restore:
-    <<: *frappe
-    restart: 'no'
-    user: '0:0'
-    profiles: [maintenance]
-    command: [env/bin/python, /opt/tenant/restore.py]
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
-      - ./restore.py:/opt/tenant/restore.py:ro
-      - ./mariadb-client.cnf:/etc/mysql/conf.d/tenant-client.cnf:ro
-      - type: bind
-        source: ${RESTORE_BACKUP_DIR:-./.no-backup}
-        target: /backup
-        read_only: true
-        bind:
-          create_host_path: false
-    environment:
-      FRAPPE_SITE: ${FRAPPE_SITE}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
-      FRAPPE_ADMIN_PASSWORD: ${FRAPPE_ADMIN_PASSWORD:?Private initializer password required}
-    depends_on: [db, redis-cache, redis-queue]
-  initialize:
-    <<: *frappe
-    restart: 'no'
-    profiles: [maintenance]
-    command: [env/bin/python, /opt/tenant/initialize.py]
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-      - logs:/home/frappe/frappe-bench/logs
-      - ./initialize.py:/opt/tenant/initialize.py:ro
-      - ./mariadb-client.cnf:/etc/mysql/conf.d/tenant-client.cnf:ro
-    environment:
-      FRAPPE_SITE: ${FRAPPE_SITE}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
-      FRAPPE_ADMIN_PASSWORD: ${FRAPPE_ADMIN_PASSWORD:?Private initializer password required}
-    depends_on: [db, redis-cache, redis-queue]
   db:
     image: ${MARIADB_IMAGE:?Pin a source-compatible MariaDB image by digest}
     restart: unless-stopped
@@ -69,11 +31,7 @@ services:
     networks: [private]
   backend:
     <<: *frappe
-    command: [start.sh]
-    environment:
-      GUNICORN_WORKERS: '2'
-      GUNICORN_THREADS: '2'
-      GUNICORN_TIMEOUT: '120'
+    command: [env/bin/gunicorn, --bind=0.0.0.0:8000, --workers=2, --threads=2, --worker-class=gthread, --worker-tmp-dir=/dev/shm, --timeout=120, frappe.app:application]
     depends_on: [db, redis-cache, redis-queue]
   websocket:
     <<: *frappe
@@ -91,12 +49,10 @@ services:
     depends_on: [db, redis-cache, redis-queue]
   frontend:
     <<: *frappe
-    networks: [private, edge]
     command: [nginx-entrypoint.sh]
     environment:
       BACKEND: backend:8000
       SOCKETIO: websocket:9000
-      NGINX_LISTEN_PORT: '8080'
       FRAPPE_SITE_NAME_HEADER: ${FRAPPE_SITE:?Select the restored site}
       UPSTREAM_REAL_IP_ADDRESS: 127.0.0.1
       UPSTREAM_REAL_IP_HEADER: X-Forwarded-For
@@ -109,7 +65,6 @@ services:
 
 networks:
   private:
-  edge:
 volumes:
   sites:
   logs:
