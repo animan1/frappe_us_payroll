@@ -36,6 +36,10 @@ def main():
 			path.mkdir(parents=True, exist_ok=True)
 			run("git", "init", str(path))
 			run("git", "-C", str(path), "remote", "add", "origin", "https://github.com/" + repo + ".git")
+		if subprocess.check_output(["git", "-C", str(path), "status", "--porcelain", "--untracked-files=no"]):
+			raise SystemExit(
+				"Build cache contains modified tracked sources; inspect before rebuilding: " + name
+			)
 		run("git", "-C", str(path), "fetch", "--depth=1", "origin", revision)
 		run("git", "-C", str(path), "checkout", "-B", "migration-locked", revision)
 	# Use the official production recipe and entrypoints, supplying local exact-commit
