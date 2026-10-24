@@ -21,9 +21,8 @@ production-initialize production-start production-apps production-logs:
 	python3 -B deploy/runtime.py $(patsubst production-%,%,$@)
 production-rehearsal-delete: ## DELETE the isolated rehearsal and ALL its data; never production.
 	python3 -B deploy/runtime.py delete-rehearsal
-production-smoke: ## Check the loopback login page and ping endpoint.
-	curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 --max-time 5 -o /dev/null http://127.0.0.1:18081/login
-	curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18081/api/method/ping
+production-smoke: ## Check loopback login, built assets, ping and realtime handshake.
+	python3 -B deploy/smoke.py
 .PHONY: production-build production-rehearsal-inputs
 production-build: ## Build a data-free production image from captured source commits.
 	python3 -B deploy/build.py

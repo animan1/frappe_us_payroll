@@ -13,7 +13,7 @@ make production-apps
 ```
 
 Expect checksum verification, database restore, file extraction and schema migration,
-then successful login-page/ping checks and all four apps in the database-backed list.
+then successful login, built-asset, ping and realtime checks, and all four apps in the database-backed list.
 Open `http://localhost:18081/login`. The existing generated administrator password is
 retained as the destination administrator password; it stays in the private env file.
 
