@@ -1,5 +1,18 @@
 # Independent production runtime (preparation)
 
+Build the custom image without reading any site data, then generate private rehearsal
+inputs from its immutable image identity and cached database/Redis digests:
+
+```sh
+make production-build
+make production-rehearsal-inputs
+```
+
+The build uses exact app commits and a pinned revision of Frappe's official production
+Docker recipe. Its full log stays in ignored `.local/production-build/build.log`.
+Uncommitted source changes are not included; reconcile them before a real-data migration.
+Site initialization and backup/restore are separate dependent slices.
+
 This is a tenant-owned Compose project, separate from the laptop development bench
 and from shared Caddy. It is not yet a deployment or restore command. Activation is
 intentionally unavailable until immutable custom image packaging and backup restore

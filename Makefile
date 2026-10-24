@@ -1,6 +1,11 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 export PRODUCTION_ENV
+.PHONY: production-build production-rehearsal-inputs
+production-build: ## Build a data-free production image from captured source commits.
+	python3 -B deploy/build.py
+production-rehearsal-inputs: ## Generate private empty-site rehearsal inputs from cached image digests.
+	python3 -B deploy/rehearsal_inputs.py
 .PHONY: migration-inspect
 migration-inspect: ## Read source app revisions and backup filenames without printing secrets or records.
 	$(COMPOSE) exec --no-TTY --workdir $(BENCH_DIR) frappe python - < deploy/source_inventory.py
